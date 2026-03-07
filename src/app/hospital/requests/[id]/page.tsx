@@ -5,12 +5,13 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Clock, Package, CheckCircle2, AlertCircle, FileText, ArrowRight, CheckCircle } from 'lucide-react';
+import { ChevronLeft, Clock, Package, CheckCircle2, AlertCircle, FileText, ArrowRight, CheckCircle, History } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import { LAUNDRY_ITEMS } from '@/app/lib/data';
 
 export default function HospitalRequestDetailPage() {
   const { id } = useParams();
@@ -107,29 +108,34 @@ export default function HospitalRequestDetailPage() {
             <Package className="h-4 w-4" /> 수량 추적 내역
           </h3>
           <div className="space-y-3">
-            {items?.map((item) => (
-              <Card key={item.id} className="rounded-3xl border-none shadow-sm bg-white overflow-hidden">
-                <CardContent className="p-5">
-                  <div className="flex justify-between items-center mb-4">
-                    <p className="font-black text-slate-900 text-lg">{item.itemName || '품목명 없음'}</p>
-                    <div className="text-right">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">요청 수량</p>
-                      <p className="text-xl font-black text-primary">{item.requestedQuantity}<span className="text-xs ml-0.5 font-bold">개</span></p>
+            {items?.map((item) => {
+              // 품목명이 없는 경우(기존 데이터) LAUNDRY_ITEMS에서 찾아오는 Fallback 로직
+              const itemName = item.itemName || LAUNDRY_ITEMS.find(li => li.id === item.laundryItemId)?.name || '품목명 없음';
+              
+              return (
+                <Card key={item.id} className="rounded-3xl border-none shadow-sm bg-white overflow-hidden">
+                  <CardContent className="p-5">
+                    <div className="flex justify-between items-center mb-4">
+                      <p className="font-black text-slate-900 text-lg">{itemName}</p>
+                      <div className="text-right">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">요청 수량</p>
+                        <p className="text-xl font-black text-primary">{item.requestedQuantity}<span className="text-xs ml-0.5 font-bold">개</span></p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">실제 수거</p>
-                      <p className="text-sm font-black text-emerald-600">{item.verifiedQuantity ?? '-'}개</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">실제 수거</p>
+                        <p className="text-sm font-black text-emerald-600">{item.verifiedQuantity ?? '-'}개</p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">최종 납품</p>
+                        <p className="text-sm font-black text-indigo-600">{item.deliveredQuantity ?? '-'}개</p>
+                      </div>
                     </div>
-                    <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">최종 납품</p>
-                      <p className="text-sm font-black text-indigo-600">{item.deliveredQuantity ?? '-'}개</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         </section>
 
@@ -167,13 +173,5 @@ export default function HospitalRequestDetailPage() {
         </Button>
       </div>
     </div>
-  );
-}
-
-function History({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/>
-    </svg>
   );
 }

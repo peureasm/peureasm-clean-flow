@@ -14,6 +14,7 @@ import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
+import { LAUNDRY_ITEMS } from '@/app/lib/data';
 
 export default function DriverCollectionDetail() {
   const { id } = useParams();
@@ -122,12 +123,14 @@ export default function DriverCollectionDetail() {
           <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">품목별 수량 입력</h3>
           {items.map((item) => {
             const diff = (item.driverQty || 0) - item.requestedQuantity;
+            const itemName = item.itemName || LAUNDRY_ITEMS.find(li => li.id === item.laundryItemId)?.name || '품목명';
+            
             return (
               <Card key={item.id} className={`bg-slate-800 border-none rounded-3xl overflow-hidden transition-all ring-1 ring-white/10 ${diff !== 0 ? 'ring-2 ring-orange-500 shadow-orange-500/10' : ''}`}>
                 <CardContent className="p-6 space-y-4">
                   <div className="flex justify-between items-center">
                     <div className="space-y-1">
-                      <p className="font-black text-xl text-white">{item.itemName || '품목명'}</p>
+                      <p className="font-black text-xl text-white">{itemName}</p>
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary" className="bg-slate-900 text-slate-300 border-none font-bold">병원 요청: {item.requestedQuantity}</Badge>
                       </div>
@@ -167,17 +170,17 @@ export default function DriverCollectionDetail() {
               <CardContent className="p-6 space-y-6">
                 <div className="space-y-2">
                   <Label className="text-xs text-slate-300 font-bold">구체적인 사유</Label>
-                  <Select value={reason} onValueChange={setReason}>
-                    <SelectTrigger className="bg-slate-900 border-white/10 h-14 rounded-2xl text-white font-bold">
-                      <SelectValue placeholder="사유를 선택해 주세요" />
-                    </SelectTrigger>
-                    <SelectContent className="bg-slate-800 text-white border-white/10">
-                      <SelectItem value="loss">세탁물 분실 의심</SelectItem>
-                      <SelectItem value="error">병원 측 입력 오류</SelectItem>
-                      <SelectItem value="damage">오염/파손으로 인한 제외</SelectItem>
-                      <SelectItem value="other">기타 (직접 입력)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <select 
+                    value={reason} 
+                    onChange={(e) => setReason(e.target.value)}
+                    className="flex h-14 w-full items-center justify-between rounded-2xl border border-white/10 bg-slate-900 px-3 py-2 text-white font-bold outline-none focus:ring-2 focus:ring-secondary"
+                  >
+                    <option value="" disabled>사유를 선택해 주세요</option>
+                    <option value="loss">세탁물 분실 의심</option>
+                    <option value="error">병원 측 입력 오류</option>
+                    <option value="damage">오염/파손으로 인한 제외</option>
+                    <option value="other">기타 (직접 입력)</option>
+                  </select>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="aspect-square bg-slate-900 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-white/10 text-slate-400 hover:text-white hover:border-white/30 transition-all cursor-pointer">

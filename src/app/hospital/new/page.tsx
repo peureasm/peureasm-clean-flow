@@ -13,7 +13,7 @@ import { LAUNDRY_ITEMS } from '@/app/lib/data';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
 import { doc, collection, serverTimestamp } from 'firebase/firestore';
 
 export default function NewRequestPage() {
@@ -21,6 +21,14 @@ export default function NewRequestPage() {
   const { toast } = useToast();
   const firestore = useFirestore();
   const { user } = useUser();
+
+  // 사용자 프로필 정보를 가져와서 병원 ID를 동적으로 할당하기 위함
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData } = useDoc(userDocRef);
 
   const [items, setItems] = useState<any[]>(
     LAUNDRY_ITEMS.map(item => ({ ...item, qty: 0 }))
@@ -55,10 +63,13 @@ export default function NewRequestPage() {
     const requestRef = doc(collection(firestore, 'collectionRequests'));
     const requestId = requestRef.id;
 
+    const hId = userData?.hospitalId || 'h1';
+    const hName = hId === 'h1' ? '서울메디컬병원' : (userData?.hospitalId || '지정 병원');
+
     const requestData = {
       id: requestId,
-      hospitalId: 'h1', // 실제로는 user.hospitalId
-      hospitalName: '서울메디컬병원',
+      hospitalId: hId,
+      hospitalName: hName,
       requestorId: user.uid,
       requestDate: requestDate,
       desiredPickupTime: pickupTime,
@@ -69,18 +80,20 @@ export default function NewRequestPage() {
       isDoublePacked: flags.doublePacked,
       hasLabels: flags.labeled,
       createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     setDocumentNonBlocking(requestRef, requestData, { merge: true });
 
-    // 품목 상세 저장 (하위 컬렉션)
+    // 품목 상세 저장 (하위 컬렉션) - itemName을 명시적으로 포함
     items.filter(i => i.qty > 0).forEach(i => {
       const itemRef = doc(collection(firestore, `collectionRequests/${requestId}/items`));
       setDocumentNonBlocking(itemRef, {
         id: itemRef.id,
         collectionRequestId: requestId,
-        hospitalId: 'h1',
+        hospitalId: hId,
         laundryItemId: i.id,
+        itemName: i.name, // 누락되었던 품목명을 저장
         requestedQuantity: i.qty,
       }, { merge: true });
     });
