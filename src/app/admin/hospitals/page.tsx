@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2 } from 'lucide-react';
+import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2, BarChart3 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { 
   Dialog, 
@@ -19,6 +19,7 @@ import { Label } from '@/components/ui/label';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, limit } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function AdminHospitalsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -27,7 +28,6 @@ export default function AdminHospitalsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // Firestore에서 병원 목록 실시간 조회
   const hospitalsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'hospitals'), limit(100));
@@ -171,14 +171,16 @@ export default function AdminHospitalsPage() {
                     <User className="h-4 w-4 text-slate-300" />
                     <span className="font-medium">{hosp.contactPersonName || '담당자 미정'}</span>
                   </div>
-                  <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                    <Phone className="h-4 w-4 text-slate-300" />
-                    <span className="font-medium">{hosp.contactPersonPhone || '연락처 미정'}</span>
-                  </div>
                 </div>
                 <div className="pt-4 flex gap-2">
-                  <Button variant="outline" className="flex-1 rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50">상세</Button>
-                  <Button variant="ghost" className="flex-1 rounded-xl h-10 text-primary font-bold hover:bg-primary/5">통계</Button>
+                  <Button variant="outline" className="flex-1 rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50" asChild>
+                    <Link href={`/admin/hospitals/${hosp.id}`}>상세</Link>
+                  </Button>
+                  <Button variant="ghost" className="flex-1 rounded-xl h-10 text-primary font-bold hover:bg-primary/5" asChild>
+                    <Link href="/admin/stats">
+                      <BarChart3 className="h-4 w-4 mr-2" /> 통계
+                    </Link>
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -188,7 +190,6 @@ export default function AdminHospitalsPage() {
         <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-white">
           <HospitalIcon className="h-12 w-12 mx-auto mb-4 text-slate-200" />
           <p className="text-slate-400 font-bold">등록된 병원이 없습니다.</p>
-          <p className="text-xs text-slate-300 mt-1">상단의 '신규 병원 등록' 버튼을 눌러 추가해 보세요.</p>
         </div>
       )}
     </div>
