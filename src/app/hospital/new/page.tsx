@@ -13,10 +13,15 @@ import { LAUNDRY_ITEMS } from '@/app/lib/data';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { useFirestore, useUser, setDocumentNonBlocking } from '@/firebase';
+import { doc, collection, serverTimestamp } from 'firebase/firestore';
 
 export default function NewRequestPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+
   const [items, setItems] = useState<any[]>(
     LAUNDRY_ITEMS.map(item => ({ ...item, qty: 0 }))
   );
@@ -26,6 +31,9 @@ export default function NewRequestPage() {
     doublePacked: false,
     labeled: false
   });
+  const [notes, setNotes] = useState('');
+  const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
+  const [pickupTime, setPickupTime] = useState('오전 10:00');
 
   const updateQty = (id: string, delta: number) => {
     setItems(prev => prev.map(item => 
@@ -42,9 +50,44 @@ export default function NewRequestPage() {
   const isSubmitDisabled = items.reduce((acc, curr) => acc + curr.qty, 0) === 0;
 
   const handleSubmit = () => {
+    if (!firestore || !user) return;
+
+    const requestRef = doc(collection(firestore, 'collectionRequests'));
+    const requestId = requestRef.id;
+
+    const requestData = {
+      id: requestId,
+      hospitalId: 'h1', // 실제로는 user.hospitalId
+      hospitalName: '서울메디컬병원',
+      requestorId: user.uid,
+      requestDate: requestDate,
+      desiredPickupTime: pickupTime,
+      currentStatus: '제출',
+      specialNotes: notes,
+      isContaminated: flags.contaminated,
+      isLeaking: flags.leaking,
+      isDoublePacked: flags.doublePacked,
+      hasLabels: flags.labeled,
+      createdAt: new Date().toISOString(),
+    };
+
+    setDocumentNonBlocking(requestRef, requestData, { merge: true });
+
+    // 품목 상세 저장 (하위 컬렉션)
+    items.filter(i => i.qty > 0).forEach(i => {
+      const itemRef = doc(collection(firestore, `collectionRequests/${requestId}/items`));
+      setDocumentNonBlocking(itemRef, {
+        id: itemRef.id,
+        collectionRequestId: requestId,
+        hospitalId: 'h1',
+        laundryItemId: i.id,
+        requestedQuantity: i.qty,
+      }, { merge: true });
+    });
+
     toast({
       title: "요청 제출 완료",
-      description: "세탁 수거 요청이 정상적으로 등록되었습니다.",
+      description: "세탁 수거 요청이 Firestore에 등록되었습니다.",
     });
     router.push('/hospital');
   };
@@ -64,11 +107,23 @@ export default function NewRequestPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label htmlFor="date" className="text-xs font-bold text-muted-foreground uppercase">수거 요청일</Label>
-              <Input id="date" type="date" defaultValue="2024-05-01" className="rounded-xl border-none shadow-sm" />
+              <Input 
+                id="date" 
+                type="date" 
+                value={requestDate}
+                onChange={(e) => setRequestDate(e.target.value)}
+                className="rounded-xl border-none shadow-sm" 
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="time" className="text-xs font-bold text-muted-foreground uppercase">희망 시간</Label>
-              <Input id="time" type="text" defaultValue="오전 10:00" className="rounded-xl border-none shadow-sm" />
+              <Input 
+                id="time" 
+                type="text" 
+                value={pickupTime}
+                onChange={(e) => setPickupTime(e.target.value)}
+                className="rounded-xl border-none shadow-sm" 
+              />
             </div>
           </div>
         </section>
@@ -154,16 +209,12 @@ export default function NewRequestPage() {
         </section>
 
         <section className="space-y-4 pb-12">
-          <h2 className="text-sm font-bold text-muted-foreground uppercase px-1">사진 및 메모</h2>
-          <div className="grid grid-cols-3 gap-2">
-            <div className="aspect-square bg-slate-100 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-slate-200 text-slate-400">
-              <Camera className="h-6 w-6" />
-              <span className="text-[10px] mt-1 font-bold">사진 추가</span>
-            </div>
-          </div>
+          <h2 className="text-sm font-bold text-muted-foreground uppercase px-1">메모</h2>
           <Textarea 
             placeholder="기사님께 전달할 특이사항을 적어주세요." 
             className="rounded-2xl border-none shadow-sm min-h-[100px] resize-none"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
           />
         </section>
       </div>
