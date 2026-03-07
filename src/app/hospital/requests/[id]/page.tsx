@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Clock, Package, CheckCircle2, AlertCircle, FileText, ArrowRight, CheckCircle, History } from 'lucide-react';
+import { ChevronLeft, Clock, Package, CheckCircle2, AlertCircle, FileText, ArrowRight, CheckCircle, History, TrendingDown, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -105,33 +105,44 @@ export default function HospitalRequestDetailPage() {
 
         <section className="space-y-4">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
-            <Package className="h-4 w-4" /> 수량 추적 내역
+            <ClipboardList className="h-4 w-4" /> 단계별 상세 수량
           </h3>
           <div className="space-y-3">
             {items?.map((item) => {
-              // 품목명이 없는 경우(기존 데이터) LAUNDRY_ITEMS에서 찾아오는 Fallback 로직
               const itemName = item.itemName || LAUNDRY_ITEMS.find(li => li.id === item.laundryItemId)?.name || '품목명 없음';
+              const reqQty = item.requestedQuantity || 0;
+              const verQty = item.verifiedQuantity !== undefined ? item.verifiedQuantity : '-';
+              const delQty = item.deliveredQuantity !== undefined ? item.deliveredQuantity : '-';
               
               return (
                 <Card key={item.id} className="rounded-3xl border-none shadow-sm bg-white overflow-hidden">
-                  <CardContent className="p-5">
-                    <div className="flex justify-between items-center mb-4">
+                  <CardContent className="p-5 space-y-4">
+                    <div className="flex justify-between items-center border-b pb-3">
                       <p className="font-black text-slate-900 text-lg">{itemName}</p>
-                      <div className="text-right">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">요청 수량</p>
-                        <p className="text-xl font-black text-primary">{item.requestedQuantity}<span className="text-xs ml-0.5 font-bold">개</span></p>
+                      <Badge variant="secondary" className="bg-primary/5 text-primary border-none">요청: {reqQty}</Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">현장 수거 (기사)</p>
+                        <p className={`text-lg font-black ${verQty !== '-' && verQty !== reqQty ? 'text-orange-500' : 'text-slate-800'}`}>
+                          {verQty}<span className="text-xs ml-0.5 font-bold">{verQty !== '-' ? '개' : ''}</span>
+                        </p>
+                      </div>
+                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
+                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">최종 납품 (병원)</p>
+                        <p className={`text-lg font-black ${delQty !== '-' && delQty !== verQty ? 'text-indigo-600' : 'text-slate-800'}`}>
+                          {delQty}<span className="text-xs ml-0.5 font-bold">{delQty !== '-' ? '개' : ''}</span>
+                        </p>
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">실제 수거</p>
-                        <p className="text-sm font-black text-emerald-600">{item.verifiedQuantity ?? '-'}개</p>
+                    
+                    {(verQty !== '-' && verQty !== reqQty) && (
+                      <div className="flex items-center gap-2 text-[10px] text-orange-500 font-bold bg-orange-50 p-2 rounded-lg border border-orange-100">
+                        <TrendingDown className="h-3 w-3" />
+                        <span>수거 과정에서 {Math.abs(Number(verQty) - Number(reqQty))}개의 수량 차이가 발생했습니다.</span>
                       </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">최종 납품</p>
-                        <p className="text-sm font-black text-indigo-600">{item.deliveredQuantity ?? '-'}개</p>
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
               );

@@ -4,7 +4,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Phone, CheckCircle2, ChevronRight, AlertTriangle, ClipboardCheck, Truck } from 'lucide-react';
+import { MapPin, Navigation, Phone, CheckCircle2, ChevronRight, AlertTriangle, ClipboardCheck, Truck, PackageCheck } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
@@ -13,7 +13,6 @@ export default function DriverDashboard() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
-  // 인덱스 오류를 방지하기 위해 orderBy를 제거하고 단순 쿼리로 변경
   const collectionQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
@@ -54,33 +53,33 @@ export default function DriverDashboard() {
                     <h3 className="text-2xl font-black text-white">{collectionList[0].hospitalName}</h3>
                     <div className="flex items-center gap-1.5 text-sm text-slate-300 font-medium">
                       <MapPin className="h-4 w-4 text-secondary" />
-                      <span>지역 거점 병원 (주소 확인 필요)</span>
+                      <span>거점 병원 (수거 요청지)</span>
                     </div>
                   </div>
                   <Badge className="bg-secondary text-secondary-foreground font-black px-3 py-1 rounded-full border-none">수거대기</Badge>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
-                  <Button variant="outline" className="border-white/10 bg-slate-700/50 text-white rounded-2xl gap-2 h-14 font-bold hover:bg-slate-700 transition-all">
-                    <Phone className="h-5 w-5" /> 연락하기
+                  <Button variant="outline" className="border-white/10 bg-slate-700/50 text-white rounded-2xl gap-2 h-14 font-bold hover:bg-slate-700">
+                    <Phone className="h-5 w-5" /> 연락
                   </Button>
-                  <Button className="bg-secondary text-secondary-foreground rounded-2xl gap-2 h-14 font-black shadow-lg shadow-secondary/20 hover:scale-[1.02] active:scale-95 transition-all">
-                    <Navigation className="h-5 w-5" /> 내비게이션
+                  <Button className="bg-secondary text-secondary-foreground rounded-2xl gap-2 h-14 font-black shadow-lg shadow-secondary/20">
+                    <Navigation className="h-5 w-5" /> 길찾기
                   </Button>
                 </div>
               </div>
               <Link href={`/driver/collection/${collectionList[0].id}`}>
                 <div className="bg-white/5 p-6 border-t border-white/5 flex items-center justify-between hover:bg-white/10 transition-all group">
                   <div className="flex items-center gap-4">
-                    <div className="h-12 w-12 rounded-2xl bg-slate-900 flex items-center justify-center border border-white/10 group-hover:border-secondary/50 transition-all">
+                    <div className="h-12 w-12 rounded-2xl bg-slate-900 flex items-center justify-center border border-white/10 group-hover:border-secondary/50">
                       <ClipboardCheck className="h-6 w-6 text-secondary" />
                     </div>
                     <div>
                       <p className="text-sm font-black text-white">현장 수거 확인 시작</p>
-                      <p className="text-xs text-slate-400 font-medium">배정된 품목 대조</p>
+                      <p className="text-xs text-slate-400 font-medium">수량 대조 및 이슈 보고</p>
                     </div>
                   </div>
-                  <ChevronRight className="h-6 w-6 text-slate-500 group-hover:text-white transition-all" />
+                  <ChevronRight className="h-6 w-6 text-slate-500 group-hover:text-white" />
                 </div>
               </Link>
             </CardContent>
@@ -88,48 +87,38 @@ export default function DriverDashboard() {
         ) : (
           <div className="p-12 text-center text-slate-400 bg-slate-800/50 rounded-3xl border border-dashed border-white/10 font-bold">
             <Truck className="h-8 w-8 mx-auto mb-2 opacity-20" />
-            현재 배정된 수거 일정이 없습니다.
+            배정된 수거 일정이 없습니다.
           </div>
         )}
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">기타 운송 목록</h2>
+        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">납품 및 출고 목록</h2>
         
         <div className="space-y-3">
           {deliveryList.map((req) => (
-            <Card key={req.id} className="bg-slate-800 border-none rounded-2xl ring-1 ring-white/5 hover:ring-white/20 transition-all">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-14 w-14 rounded-2xl bg-slate-900 flex items-center justify-center border border-white/5">
-                    <Truck className="h-7 w-7 text-orange-400" />
+            <Link key={req.id} href={`/driver/delivery/${req.id}`}>
+              <Card className="bg-slate-800 border-none rounded-2xl ring-1 ring-white/5 hover:ring-white/20 transition-all mb-3">
+                <CardContent className="p-5 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="h-14 w-14 rounded-2xl bg-slate-900 flex items-center justify-center border border-white/5">
+                      <PackageCheck className="h-7 w-7 text-indigo-400" />
+                    </div>
+                    <div>
+                      <p className="font-black text-white text-lg">{req.hospitalName}</p>
+                      <p className="text-xs text-slate-300 font-bold bg-indigo-500/10 text-indigo-400 px-2 py-0.5 rounded-full inline-block mt-1">납품/배송 대기</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-black text-white text-lg">{req.hospitalName}</p>
-                    <p className="text-xs text-slate-300 font-bold bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded-full inline-block mt-1">납품 대기 중</p>
-                  </div>
-                </div>
-                <ChevronRight className="h-6 w-6 text-slate-600" />
-              </CardContent>
-            </Card>
+                  <ChevronRight className="h-6 w-6 text-slate-600" />
+                </CardContent>
+              </Card>
+            </Link>
           ))}
+          {!isLoading && deliveryList.length === 0 && (
+            <div className="p-8 text-center text-slate-500 text-xs italic">현재 배송 예정 건이 없습니다.</div>
+          )}
         </div>
       </section>
-
-      <Card className="bg-amber-500/10 border border-amber-500/20 rounded-3xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-4 opacity-10">
-          <AlertTriangle className="h-16 w-16 text-amber-500" />
-        </div>
-        <CardContent className="p-6 flex gap-4 relative z-10">
-          <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0" />
-          <div className="space-y-1">
-            <p className="text-base font-black text-amber-400">업무 공지</p>
-            <p className="text-sm text-slate-200 leading-relaxed">
-              공장 설비 보수로 인해 오후 납품 차량 진입로가 변경되었습니다. 입구 안내를 확인하세요.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 }
