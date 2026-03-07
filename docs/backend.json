@@ -4,7 +4,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Hospital",
       "type": "object",
-      "description": "병원 세탁 서비스의 고객인 병원 정보를 관리하는 엔티티입니다.",
+      "description": "세탁 서비스를 이용하는 병원 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
@@ -12,37 +12,28 @@
         },
         "name": {
           "type": "string",
-          "description": "병원의 공식 명칭."
+          "description": "병원의 공식 명칭입니다."
         },
         "address": {
           "type": "string",
-          "description": "병원의 주소."
+          "description": "병원의 주소입니다."
         },
-        "contactPersonId": {
+        "contactPersonName": {
           "type": "string",
-          "description": "병원의 주 담당 사용자 ID. (관계: User 1:N Hospital)"
+          "description": "세탁물 관련 업무를 담당하는 병원 담당자의 이름입니다."
         },
-        "phoneNumber": {
+        "contactPersonPhone": {
           "type": "string",
-          "description": "병원의 대표 전화번호."
+          "description": "병원 담당자의 전화번호입니다."
         },
-        "email": {
+        "contactPersonEmail": {
           "type": "string",
-          "description": "병원의 대표 이메일 주소.",
+          "description": "병원 담당자의 이메일 주소입니다.",
           "format": "email"
         },
-        "isActive": {
-          "type": "boolean",
-          "description": "병원이 현재 활성화 상태인지 여부."
-        },
-        "createdAt": {
+        "registrationDate": {
           "type": "string",
-          "description": "엔티티가 생성된 일시.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "엔티티가 마지막으로 업데이트된 일시.",
+          "description": "병원 정보가 시스템에 등록된 일시입니다.",
           "format": "date-time"
         }
       },
@@ -50,75 +41,77 @@
         "id",
         "name",
         "address",
-        "contactPersonId",
-        "phoneNumber",
-        "email",
-        "isActive",
-        "createdAt",
-        "updatedAt"
+        "contactPersonName",
+        "contactPersonPhone",
+        "contactPersonEmail",
+        "registrationDate"
       ]
     },
     "User": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "User",
       "type": "object",
-      "description": "시스템에 접근하는 사용자(병원 담당자, 기사, 공장 작업자, 관리자) 정보를 관리하는 엔티티입니다.",
+      "description": "시스템을 사용하는 사용자 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
           "description": "Unique identifier for the User entity."
         },
-        "email": {
+        "username": {
           "type": "string",
-          "description": "사용자의 로그인 이메일 주소.",
-          "format": "email"
+          "description": "사용자 로그인 시 사용되는 고유한 계정명입니다."
         },
         "name": {
           "type": "string",
-          "description": "사용자의 이름."
+          "description": "사용자의 실명입니다."
         },
         "role": {
           "type": "string",
-          "description": "사용자의 역할 (예: hospital_staff, driver, factory_worker, admin)."
+          "description": "사용자의 역할입니다. (병원 담당자, 수거 기사, 공장 작업자, 관리자)",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
         },
         "hospitalId": {
           "type": "string",
-          "description": "사용자가 소속된 병원 ID (병원 담당자 역할인 경우). (관계: Hospital 1:N User)"
+          "description": "사용자가 소속된 병원의 ID입니다. (병원 담당자 역할에만 해당) (Relationship: Hospital 1:N User)"
+        },
+        "email": {
+          "type": "string",
+          "description": "사용자의 이메일 주소입니다.",
+          "format": "email"
         },
         "phoneNumber": {
           "type": "string",
-          "description": "사용자의 연락처."
+          "description": "사용자의 전화번호입니다."
         },
         "isActive": {
           "type": "boolean",
-          "description": "사용자 계정이 현재 활성화 상태인지 여부."
+          "description": "사용자 계정의 활성화 여부입니다."
         },
         "createdAt": {
           "type": "string",
-          "description": "엔티티가 생성된 일시.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "엔티티가 마지막으로 업데이트된 일시.",
+          "description": "사용자 계정이 생성된 일시입니다.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
-        "email",
+        "username",
         "name",
         "role",
+        "email",
+        "phoneNumber",
         "isActive",
-        "createdAt",
-        "updatedAt"
+        "createdAt"
       ]
     },
     "LaundryItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "LaundryItem",
       "type": "object",
-      "description": "세탁 서비스에서 처리하는 개별 세탁 품목의 정보 및 단가를 관리하는 엔티티입니다.",
+      "description": "세탁 서비스에서 취급하는 세탁 품목 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
@@ -126,45 +119,33 @@
         },
         "name": {
           "type": "string",
-          "description": "세탁 품목의 명칭 (예: 환자복, 침대시트, 수술복)."
-        },
-        "unitPrice": {
-          "type": "number",
-          "description": "해당 품목의 개당 또는 단위당 단가."
+          "description": "세탁 품목의 이름입니다. (예: 환자복, 침대시트)"
         },
         "description": {
           "type": "string",
-          "description": "품목에 대한 상세 설명."
+          "description": "세탁 품목에 대한 추가 설명입니다."
+        },
+        "unitPrice": {
+          "type": "number",
+          "description": "해당 품목의 단가로, 정산 시 사용됩니다."
         },
         "isActive": {
           "type": "boolean",
-          "description": "품목이 현재 활성화 상태인지 여부."
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "엔티티가 생성된 일시.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "엔티티가 마지막으로 업데이트된 일시.",
-          "format": "date-time"
+          "description": "품목의 사용 가능 여부입니다."
         }
       },
       "required": [
         "id",
         "name",
         "unitPrice",
-        "isActive",
-        "createdAt",
-        "updatedAt"
+        "isActive"
       ]
     },
     "CollectionRequest": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "CollectionRequest",
       "type": "object",
-      "description": "병원에서 세탁물 수거를 요청하는 전체 흐름을 관리하는 핵심 엔티티입니다.",
+      "description": "병원이 세탁물 수거를 요청하는 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
@@ -172,283 +153,387 @@
         },
         "hospitalId": {
           "type": "string",
-          "description": "요청을 등록한 병원 ID. (관계: Hospital 1:N CollectionRequest)"
+          "description": "수거 요청을 등록한 병원의 ID입니다. (Relationship: Hospital 1:N CollectionRequest)"
+        },
+        "requestorId": {
+          "type": "string",
+          "description": "수거 요청을 등록한 병원 담당자의 ID입니다. (Relationship: User 1:N CollectionRequest)"
         },
         "requestDate": {
           "type": "string",
-          "description": "수거 요청이 등록된 날짜.",
-          "format": "date-time"
+          "description": "수거 요청이 등록된 날짜입니다.",
+          "format": "date"
         },
-        "pickupTimeSlot": {
+        "desiredPickupTime": {
           "type": "string",
-          "description": "수거를 희망하는 시간대 (예: '오전 09시-12시')."
+          "description": "병원이 희망하는 수거 시간대입니다. (예: '오전 9시-11시')"
         },
-        "requestedById": {
+        "currentStatus": {
           "type": "string",
-          "description": "수거 요청을 등록한 병원 담당자 ID. (관계: User 1:N CollectionRequest)"
-        },
-        "driverId": {
-          "type": "string",
-          "description": "해당 수거 요청에 배정된 기사 ID. (관계: User 1:N CollectionRequest)"
-        },
-        "status": {
-          "type": "string",
-          "description": "현재 수거 요청의 상태 (예: 임시저장, 제출, 수거완료, 공장입고, 세탁중, 건조중, 포장완료, 출고, 납품완료, 병원확인완료, 종결)."
+          "description": "현재 수거 요청의 진행 상태입니다.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
         },
         "specialNotes": {
           "type": "string",
-          "description": "병원 담당자가 추가한 특이사항 메모."
+          "description": "병원 담당자가 입력한 특이사항 메모입니다."
         },
         "isContaminated": {
           "type": "boolean",
-          "description": "요청된 세탁물에 오염이 있는지 여부."
+          "description": "세탁물에 오염이 발생했는지 여부입니다."
         },
         "isLeaking": {
           "type": "boolean",
-          "description": "요청된 세탁물에서 누수가 있는지 여부."
+          "description": "세탁물 포장에서 누수가 발생했는지 여부입니다."
         },
         "isDoublePacked": {
           "type": "boolean",
-          "description": "요청된 세탁물이 이중 포장되어 있는지 여부."
+          "description": "세탁물이 이중으로 포장되었는지 여부입니다."
         },
-        "hasLabelingIssue": {
+        "hasLabels": {
           "type": "boolean",
-          "description": "요청된 세탁물에 표시 문제가 있는지 여부."
-        },
-        "totalItemsRequested": {
-          "type": "number",
-          "description": "병원 담당자가 요청한 총 품목 수량."
-        },
-        "totalItemsCollected": {
-          "type": "number",
-          "description": "기사가 현장에서 확인한 총 품목 수량."
-        },
-        "totalItemsInbounded": {
-          "type": "number",
-          "description": "공장에서 입고 처리한 총 품목 수량."
-        },
-        "totalItemsDelivered": {
-          "type": "number",
-          "description": "최종 납품된 총 품목 수량."
-        },
-        "hasDiscrepancy": {
-          "type": "boolean",
-          "description": "병원 요청 수량과 기사 확인 수량 사이에 차이가 발생했는지 여부."
+          "description": "세탁물에 특수 표시가 되어있는지 여부입니다."
         },
         "createdAt": {
           "type": "string",
-          "description": "엔티티가 생성된 일시.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "엔티티가 마지막으로 업데이트된 일시.",
+          "description": "수거 요청이 시스템에 생성된 일시입니다.",
           "format": "date-time"
         },
         "submittedAt": {
           "type": "string",
-          "description": "수거 요청이 최종 제출된 일시.",
+          "description": "임시 저장 후 수거 요청이 최종 제출된 일시입니다. (선택 사항)",
           "format": "date-time"
         },
-        "collectedAt": {
+        "settlementId": {
           "type": "string",
-          "description": "기사에 의해 수거가 완료된 일시.",
-          "format": "date-time"
-        },
-        "factoryInboundedAt": {
-          "type": "string",
-          "description": "공장으로 세탁물이 입고 처리된 일시.",
-          "format": "date-time"
-        },
-        "packedAt": {
-          "type": "string",
-          "description": "세탁물이 포장 완료된 일시.",
-          "format": "date-time"
-        },
-        "shippedAt": {
-          "type": "string",
-          "description": "세탁물이 공장에서 출고된 일시.",
-          "format": "date-time"
-        },
-        "deliveredAt": {
-          "type": "string",
-          "description": "세탁물이 병원에 납품 완료된 일시.",
-          "format": "date-time"
-        },
-        "confirmedByHospitalAt": {
-          "type": "string",
-          "description": "병원 담당자가 납품을 최종 확인한 일시.",
-          "format": "date-time"
+          "description": "이 요청이 포함된 정산 데이터의 ID입니다. (정산 완료 시 설정) (Relationship: Settlement 1:N CollectionRequest)"
         }
       },
       "required": [
         "id",
         "hospitalId",
+        "requestorId",
         "requestDate",
-        "pickupTimeSlot",
-        "requestedById",
-        "status",
+        "desiredPickupTime",
+        "currentStatus",
+        "specialNotes",
         "isContaminated",
         "isLeaking",
         "isDoublePacked",
-        "hasLabelingIssue",
-        "totalItemsRequested",
-        "createdAt",
-        "updatedAt",
-        "submittedAt"
+        "hasLabels",
+        "createdAt"
       ]
     },
-    "RequestItem": {
+    "CollectionRequestItem": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "RequestItem",
+      "title": "CollectionRequestItem",
       "type": "object",
-      "description": "수거 요청 내 개별 세탁 품목의 수량 및 처리 상태를 상세히 관리하는 엔티티입니다.",
+      "description": "수거 요청에 포함된 개별 세탁 품목의 상세 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the RequestItem entity."
+          "description": "Unique identifier for the CollectionRequestItem entity."
         },
         "collectionRequestId": {
           "type": "string",
-          "description": "이 품목이 속한 수거 요청 ID. (관계: CollectionRequest 1:N RequestItem)"
+          "description": "이 품목 상세가 속한 수거 요청의 ID입니다. (Relationship: CollectionRequest 1:N CollectionRequestItem)"
         },
         "laundryItemId": {
           "type": "string",
-          "description": "상세 품목에 해당하는 세탁 품목 ID. (관계: LaundryItem 1:N RequestItem)"
+          "description": "요청된 세탁 품목의 ID입니다. (Relationship: LaundryItem 1:N CollectionRequestItem)"
         },
-        "hospitalQuantity": {
+        "requestedQuantity": {
           "type": "number",
-          "description": "병원 담당자가 입력한 이 품목의 수량."
-        },
-        "driverQuantity": {
-          "type": "number",
-          "description": "기사가 현장에서 확인한 이 품목의 수량."
-        },
-        "factoryInboundQuantity": {
-          "type": "number",
-          "description": "공장에서 입고 처리한 이 품목의 수량."
-        },
-        "deliveryQuantity": {
-          "type": "number",
-          "description": "최종 납품된 이 품목의 수량."
-        },
-        "discrepancyReasonIds": {
-          "type": "array",
-          "description": "이 품목의 수량 차이에 대한 사유 ID 목록. (관계: DiscrepancyReason N:N RequestItem)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "discrepancyNotes": {
-          "type": "string",
-          "description": "이 품목의 수량 차이에 대한 상세 사유."
-        },
-        "photoIds": {
-          "type": "array",
-          "description": "이 품목과 관련된 첨부 사진 ID 목록. (관계: Photo N:N RequestItem)",
-          "items": {
-            "type": "string"
-          }
-        },
-        "createdAt": {
-          "type": "string",
-          "description": "엔티티가 생성된 일시.",
-          "format": "date-time"
-        },
-        "updatedAt": {
-          "type": "string",
-          "description": "엔티티가 마지막으로 업데이트된 일시.",
-          "format": "date-time"
+          "description": "병원 담당자가 입력한 해당 품목의 요청 수량입니다."
         }
       },
       "required": [
         "id",
         "collectionRequestId",
         "laundryItemId",
-        "hospitalQuantity",
-        "createdAt",
-        "updatedAt"
+        "requestedQuantity"
       ]
     },
-    "Photo": {
+    "DriverVerification": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Photo",
+      "title": "DriverVerification",
       "type": "object",
-      "description": "수거 요청 또는 특정 품목의 상태를 시각적으로 기록하기 위한 사진 정보를 관리하는 엔티티입니다.",
+      "description": "수거 기사가 현장에서 세탁물 수량을 확인한 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the Photo entity."
-        },
-        "url": {
-          "type": "string",
-          "description": "사진이 저장된 스토리지의 URL.",
-          "format": "uri"
-        },
-        "thumbnailUrl": {
-          "type": "string",
-          "description": "사진의 썸네일 이미지 URL.",
-          "format": "uri"
-        },
-        "uploadedById": {
-          "type": "string",
-          "description": "사진을 업로드한 사용자 ID. (관계: User 1:N Photo)"
+          "description": "Unique identifier for the DriverVerification entity."
         },
         "collectionRequestId": {
           "type": "string",
-          "description": "사진이 연관된 수거 요청 ID. (관계: CollectionRequest 1:N Photo)"
+          "description": "관련 수거 요청의 ID입니다. (Relationship: CollectionRequest 1:N DriverVerification)"
         },
-        "requestItemId": {
+        "laundryItemId": {
           "type": "string",
-          "description": "사진이 연관된 수거 요청 상세 품목 ID. (관계: RequestItem 1:N Photo)"
+          "description": "확인된 세탁 품목의 ID입니다. (Relationship: LaundryItem 1:N DriverVerification)"
+        },
+        "driverId": {
+          "type": "string",
+          "description": "수거를 확인한 기사의 ID입니다. (Relationship: User 1:N DriverVerification)"
+        },
+        "verifiedQuantity": {
+          "type": "number",
+          "description": "수거 기사가 현장에서 실제로 확인한 수량입니다."
+        },
+        "verificationDate": {
+          "type": "string",
+          "description": "수거 기사가 수량을 확인한 일시입니다.",
+          "format": "date-time"
+        },
+        "discrepancyReasonId": {
+          "type": "string",
+          "description": "병원 입력 수량과 차이가 발생한 경우의 사유 ID입니다. (Relationship: DiscrepancyReason 1:N DriverVerification)"
+        },
+        "photoIds": {
+          "type": "array",
+          "description": "차이 발생 시 첨부된 사진들의 ID 목록입니다. (Relationship: Attachment N:N DriverVerification)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "collectionRequestId",
+        "laundryItemId",
+        "driverId",
+        "verifiedQuantity",
+        "verificationDate"
+      ]
+    },
+    "FactoryInbound": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "FactoryInbound",
+      "type": "object",
+      "description": "세탁 공장에서 세탁물이 입고될 때 확인한 정보를 관리하는 엔티티입니다.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the FactoryInbound entity."
+        },
+        "collectionRequestId": {
+          "type": "string",
+          "description": "관련 수거 요청의 ID입니다. (Relationship: CollectionRequest 1:N FactoryInbound)"
+        },
+        "laundryItemId": {
+          "type": "string",
+          "description": "입고된 세탁 품목의 ID입니다. (Relationship: LaundryItem 1:N FactoryInbound)"
+        },
+        "inboundOperatorId": {
+          "type": "string",
+          "description": "공장 입고를 처리한 작업자의 ID입니다. (Relationship: User 1:N FactoryInbound)"
+        },
+        "inboundQuantity": {
+          "type": "number",
+          "description": "공장에서 입고 시 확인한 수량입니다."
+        },
+        "inboundDate": {
+          "type": "string",
+          "description": "세탁물이 공장에 입고된 일시입니다.",
+          "format": "date-time"
+        },
+        "discrepancyReasonId": {
+          "type": "string",
+          "description": "기사 확인 수량과 차이가 발생한 경우의 사유 ID입니다. (Relationship: DiscrepancyReason 1:N FactoryInbound)"
+        },
+        "photoIds": {
+          "type": "array",
+          "description": "차이 발생 시 첨부된 사진들의 ID 목록입니다. (Relationship: Attachment N:N FactoryInbound)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "collectionRequestId",
+        "laundryItemId",
+        "inboundOperatorId",
+        "inboundQuantity",
+        "inboundDate"
+      ]
+    },
+    "DeliveryItem": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DeliveryItem",
+      "type": "object",
+      "description": "세탁 완료 후 병원에 납품된 개별 세탁 품목 정보를 관리하는 엔티티입니다.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the DeliveryItem entity."
+        },
+        "collectionRequestId": {
+          "type": "string",
+          "description": "관련 수거 요청의 ID입니다. (Relationship: CollectionRequest 1:N DeliveryItem)"
+        },
+        "laundryItemId": {
+          "type": "string",
+          "description": "납품된 세탁 품목의 ID입니다. (Relationship: LaundryItem 1:N DeliveryItem)"
+        },
+        "driverId": {
+          "type": "string",
+          "description": "납품을 완료한 기사의 ID입니다. (Relationship: User 1:N DeliveryItem)"
+        },
+        "deliveredQuantity": {
+          "type": "number",
+          "description": "병원에 최종적으로 납품된 수량입니다."
+        },
+        "deliveryDate": {
+          "type": "string",
+          "description": "세탁물이 병원에 납품 완료된 일시입니다.",
+          "format": "date-time"
+        },
+        "hospitalConfirmationDate": {
+          "type": "string",
+          "description": "병원이 납품을 최종 확인한 일시입니다.",
+          "format": "date-time"
+        },
+        "hospitalConfirmerId": {
+          "type": "string",
+          "description": "납품을 확인한 병원 담당자의 ID입니다. (Relationship: User 1:N DeliveryItem)"
+        },
+        "discrepancyReasonId": {
+          "type": "string",
+          "description": "공장 출고 수량과 차이가 발생한 경우의 사유 ID입니다. (Relationship: DiscrepancyReason 1:N DeliveryItem)"
+        },
+        "photoIds": {
+          "type": "array",
+          "description": "차이 발생 시 첨부된 사진들의 ID 목록입니다. (Relationship: Attachment N:N DeliveryItem)",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "collectionRequestId",
+        "laundryItemId",
+        "driverId",
+        "deliveredQuantity",
+        "deliveryDate"
+      ]
+    },
+    "Attachment": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Attachment",
+      "type": "object",
+      "description": "시스템 내 다양한 엔티티에 첨부된 사진 파일 정보를 관리하는 엔티티입니다.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Attachment entity."
+        },
+        "attachedToEntityName": {
+          "type": "string",
+          "description": "사진이 첨부된 엔티티의 이름입니다. (예: CollectionRequest, DriverVerification)"
+        },
+        "attachedToEntityId": {
+          "type": "string",
+          "description": "사진이 첨부된 엔티티의 고유 ID입니다."
+        },
+        "url": {
+          "type": "string",
+          "description": "첨부된 사진 파일이 저장된 스토리지의 URL입니다.",
+          "format": "uri"
         },
         "description": {
           "type": "string",
-          "description": "사진에 대한 설명."
+          "description": "첨부 사진에 대한 간략한 설명입니다. (예: '수거 전 오염 확인 사진')"
+        },
+        "uploadedById": {
+          "type": "string",
+          "description": "사진을 업로드한 사용자의 ID입니다. (Relationship: User 1:N Attachment)"
         },
         "uploadedAt": {
           "type": "string",
-          "description": "사진이 업로드된 일시.",
+          "description": "사진이 업로드된 일시입니다.",
           "format": "date-time"
         }
       },
       "required": [
         "id",
+        "attachedToEntityName",
+        "attachedToEntityId",
         "url",
         "uploadedById",
         "uploadedAt"
       ]
     },
-    "ProcessLog": {
+    "DiscrepancyReason": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ProcessLog",
+      "title": "DiscrepancyReason",
       "type": "object",
-      "description": "각 수거 요청의 공정 상태 변화 이력을 기록하는 엔티티입니다.",
+      "description": "세탁물 수량 차이 발생 시 선택할 수 있는 사유 목록을 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the ProcessLog entity."
+          "description": "Unique identifier for the DiscrepancyReason entity."
+        },
+        "reasonCode": {
+          "type": "string",
+          "description": "차이 사유를 식별하는 고유 코드입니다. (예: 'MISSING_ITEM', 'EXTRA_ITEM')"
+        },
+        "reasonText": {
+          "type": "string",
+          "description": "차이 사유에 대한 상세 설명입니다. (한국어)"
+        },
+        "appliesTo": {
+          "type": "array",
+          "description": "이 사유가 적용될 수 있는 업무 단계 목록입니다. (예: 'driver', 'factory', 'delivery')",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "id",
+        "reasonCode",
+        "reasonText",
+        "appliesTo"
+      ]
+    },
+    "ProcessStatusHistory": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ProcessStatusHistory",
+      "type": "object",
+      "description": "수거 요청의 상태 변경 이력을 추적하는 엔티티입니다.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ProcessStatusHistory entity."
         },
         "collectionRequestId": {
           "type": "string",
-          "description": "이 로그가 속한 수거 요청 ID. (관계: CollectionRequest 1:N ProcessLog)"
+          "description": "상태 변경이 발생한 수거 요청의 ID입니다. (Relationship: CollectionRequest 1:N ProcessStatusHistory)"
         },
         "status": {
           "type": "string",
-          "description": "변경되거나 기록된 공정 상태 (예: '세탁중', '건조중', '포장완료')."
+          "description": "변경되기 전 또는 변경된 상태 값입니다.",
+          "format": "enum",
+          "items": {
+            "type": "string"
+          }
         },
         "changedById": {
           "type": "string",
-          "description": "상태를 변경하거나 로그를 기록한 사용자 ID. (관계: User 1:N ProcessLog)"
-        },
-        "changeReason": {
-          "type": "string",
-          "description": "상태 변경 또는 로그 기록에 대한 사유."
+          "description": "상태를 변경한 사용자의 ID입니다. (Relationship: User 1:N ProcessStatusHistory)"
         },
         "changedAt": {
           "type": "string",
-          "description": "상태 변경 또는 로그가 기록된 일시.",
+          "description": "상태 변경이 발생한 일시입니다.",
           "format": "date-time"
+        },
+        "notes": {
+          "type": "string",
+          "description": "상태 변경에 대한 추가적인 메모입니다."
         }
       },
       "required": [
@@ -463,7 +548,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Settlement",
       "type": "object",
-      "description": "병원별 월별 세탁 서비스 정산 데이터를 관리하는 엔티티입니다.",
+      "description": "병원별 월별 세탁물 정산 데이터를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
@@ -471,49 +556,41 @@
         },
         "hospitalId": {
           "type": "string",
-          "description": "정산 대상 병원 ID. (관계: Hospital 1:N Settlement)"
+          "description": "정산 대상 병원의 ID입니다. (Relationship: Hospital 1:N Settlement)"
         },
         "settlementMonth": {
           "type": "string",
-          "description": "정산 대상 월 (YYYY-MM 형식)."
+          "description": "정산 기간을 나타내는 월입니다. (YYYY-MM 형식)"
         },
-        "collectionRequestIds": {
-          "type": "array",
-          "description": "이 정산에 포함된 모든 수거 요청 ID 목록. (관계: CollectionRequest N:N Settlement)",
+        "totalAmount": {
+          "type": "number",
+          "description": "해당 정산 기간의 총 금액입니다."
+        },
+        "status": {
+          "type": "string",
+          "description": "정산의 현재 상태입니다. (예: '집계중', '확정', '청구', '수금완료')",
+          "format": "enum",
           "items": {
             "type": "string"
           }
         },
-        "totalAmount": {
-          "type": "number",
-          "description": "해당 월의 총 정산 금액."
-        },
-        "status": {
+        "settledById": {
           "type": "string",
-          "description": "정산의 현재 상태 (예: 집계중, 확정, 청구, 수금완료)."
+          "description": "정산을 확정 처리한 관리자의 ID입니다. (Relationship: User 1:N Settlement)"
         },
-        "generatedById": {
+        "settledAt": {
           "type": "string",
-          "description": "정산 데이터를 생성한 관리자 ID. (관계: User 1:N Settlement)"
-        },
-        "generatedAt": {
-          "type": "string",
-          "description": "정산 데이터가 생성된 일시.",
+          "description": "정산이 확정된 일시입니다.",
           "format": "date-time"
         },
-        "confirmedAt": {
+        "invoiceUrl": {
           "type": "string",
-          "description": "정산이 확정된 일시.",
-          "format": "date-time"
-        },
-        "invoicedAt": {
-          "type": "string",
-          "description": "정산이 청구된 일시.",
-          "format": "date-time"
+          "description": "생성된 청구서 문서의 URL입니다. (선택 사항)",
+          "format": "uri"
         },
         "paidAt": {
           "type": "string",
-          "description": "정산 금액이 수금 완료된 일시.",
+          "description": "청구 금액이 수금 완료된 일시입니다. (선택 사항)",
           "format": "date-time"
         }
       },
@@ -523,49 +600,48 @@
         "settlementMonth",
         "totalAmount",
         "status",
-        "generatedById",
-        "generatedAt"
+        "settledById",
+        "settledAt"
       ]
     },
-    "DiscrepancyReason": {
+    "SettlementItemDetail": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DiscrepancyReason",
+      "title": "SettlementItemDetail",
       "type": "object",
-      "description": "세탁물 수량 차이 발생 시 선택할 수 있는 사유 목록을 관리하는 엔티티입니다.",
+      "description": "월별 정산 내역에 포함된 개별 품목의 상세 정보를 관리하는 엔티티입니다.",
       "properties": {
         "id": {
           "type": "string",
-          "description": "Unique identifier for the DiscrepancyReason entity."
+          "description": "Unique identifier for the SettlementItemDetail entity."
         },
-        "reasonText": {
+        "settlementId": {
           "type": "string",
-          "description": "차이 사유의 상세 텍스트 (예: '병원 입력 오류', '기사 오측정')."
+          "description": "이 상세 내역이 속한 정산의 ID입니다. (Relationship: Settlement 1:N SettlementItemDetail)"
         },
-        "description": {
+        "laundryItemId": {
           "type": "string",
-          "description": "사유에 대한 추가 설명."
+          "description": "정산된 세탁 품목의 ID입니다. (Relationship: LaundryItem 1:N SettlementItemDetail)"
         },
-        "isActive": {
-          "type": "boolean",
-          "description": "사유가 현재 사용 가능한지 여부."
+        "deliveredQuantity": {
+          "type": "number",
+          "description": "해당 품목의 정산 기간 내 최종 납품 수량 합계입니다."
         },
-        "createdAt": {
-          "type": "string",
-          "description": "엔티티가 생성된 일시.",
-          "format": "date-time"
+        "unitPriceAtSettlement": {
+          "type": "number",
+          "description": "정산 시점에 적용된 해당 품목의 단가입니다. (이후 품목 단가 변경과 무관)"
         },
-        "updatedAt": {
-          "type": "string",
-          "description": "엔티티가 마지막으로 업데이트된 일시.",
-          "format": "date-time"
+        "itemTotalAmount": {
+          "type": "number",
+          "description": "해당 품목의 총 금액입니다. (수량 * 단가)"
         }
       },
       "required": [
         "id",
-        "reasonText",
-        "isActive",
-        "createdAt",
-        "updatedAt"
+        "settlementId",
+        "laundryItemId",
+        "deliveredQuantity",
+        "unitPriceAtSettlement",
+        "itemTotalAmount"
       ]
     }
   },
@@ -578,33 +654,13 @@
   "firestore": {
     "structure": [
       {
-        "path": "/admin_roles/{userId}",
+        "path": "/hospitals/{hospitalId}",
         "definition": {
-          "entityName": "User",
+          "entityName": "Hospital",
           "schema": {
-            "$ref": "#/backend/entities/User"
+            "$ref": "#/backend/entities/Hospital"
           },
-          "description": "관리자 역할을 가진 사용자를 위한 컬렉션입니다. 문서의 존재 여부로 관리자 권한을 부여하며, 보안 규칙에서 `exists()` 함수로 빠르게 권한을 확인할 수 있습니다. 사용자 문서와는 별개로 권한 부여를 위한 최소한의 데이터를 포함합니다 (예: { active: true })."
-        }
-      },
-      {
-        "path": "/driver_roles/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "수거 기사 역할을 가진 사용자를 위한 컬렉션입니다. 문서의 존재 여부로 기사 권한을 부여하며, 보안 규칙에서 `exists()` 함수로 빠르게 권한을 확인할 수 있습니다. 사용자 문서와는 별개로 권한 부여를 위한 최소한의 데이터를 포함합니다 (예: { active: true })."
-        }
-      },
-      {
-        "path": "/factory_worker_roles/{userId}",
-        "definition": {
-          "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "공장 작업자 역할을 가진 사용자를 위한 컬렉션입니다. 문서의 존재 여부로 공장 작업자 권한을 부여하며, 보안 규칙에서 `exists()` 함수로 빠르게 권한을 확인할 수 있습니다. 사용자 문서와는 별개로 권한 부여를 위한 최소한의 데이터를 포함합니다 (예: { active: true })."
+          "description": "세탁 서비스를 이용하는 병원 정보를 관리하는 최상위 컬렉션입니다. 관리자만 CRUD 권한을 가지며, 병원 담당자는 본인의 병원 정보만 읽을 수 있습니다."
         }
       },
       {
@@ -614,135 +670,171 @@
           "schema": {
             "$ref": "#/backend/entities/User"
           },
-          "description": "시스템 사용자의 프로필 정보를 담는 컬렉션입니다. `request.auth.uid`와 문서 ID를 일치시켜 사용자의 개인 데이터 접근을 제어합니다. `hospitalId` 필드는 병원 담당자 역할 사용자의 소속 병원을 나타내며, 다른 컬렉션의 접근 권한 확인에 활용됩니다.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "사용자의 고유 식별자 (Firebase Authentication UID와 동일)."
-            }
-          ]
+          "description": "시스템을 사용하는 사용자 정보를 관리하는 최상위 컬렉션입니다. `userId`는 Firebase Authentication의 `uid`와 매핑됩니다. 사용자는 자신의 프로필을 읽고 수정할 수 있으며, 관리자는 모든 사용자 정보를 CRUD할 수 있습니다. 각 사용자 문서에는 `role` 및 `hospitalId` (병원 담당자의 경우) 필드를 포함하여 역할 기반 접근 제어에 활용됩니다."
         }
       },
       {
-        "path": "/hospitals/{hospitalId}",
-        "definition": {
-          "entityName": "Hospital",
-          "schema": {
-            "$ref": "#/backend/entities/Hospital"
-          },
-          "description": "병원 정보를 관리하는 컬렉션입니다. 관리자만 모든 병원 데이터에 접근할 수 있으며, 병원 담당자는 자신의 `users/{userId}` 문서에 명시된 `hospitalId`와 일치하는 병원 데이터에만 접근할 수 있습니다.",
-          "params": [
-            {
-              "name": "hospitalId",
-              "description": "병원의 고유 식별자."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/laundry_items/{laundryItemId}",
+        "path": "/laundryItems/{laundryItemId}",
         "definition": {
           "entityName": "LaundryItem",
           "schema": {
             "$ref": "#/backend/entities/LaundryItem"
           },
-          "description": "세탁 서비스 품목의 마스터 데이터를 관리하는 컬렉션입니다. 모든 인증된 사용자가 읽을 수 있으며, 관리자만 생성, 수정, 삭제할 수 있습니다.",
-          "params": [
-            {
-              "name": "laundryItemId",
-              "description": "세탁 품목의 고유 식별자."
-            }
-          ]
+          "description": "세탁 서비스에서 취급하는 세탁 품목 정보를 관리하는 최상위 컬렉션입니다. 관리자만 CRUD 권한을 가지며, 모든 사용자는 품목 정보를 읽을 수 있습니다."
         }
       },
       {
-        "path": "/discrepancy_reasons/{discrepancyReasonId}",
+        "path": "/discrepancyReasons/{discrepancyReasonId}",
         "definition": {
           "entityName": "DiscrepancyReason",
           "schema": {
             "$ref": "#/backend/entities/DiscrepancyReason"
           },
-          "description": "수량 차이 발생 시 선택할 수 있는 사유의 마스터 데이터를 관리하는 컬렉션입니다. 모든 인증된 사용자가 읽을 수 있으며, 관리자만 생성, 수정, 삭제할 수 있습니다.",
-          "params": [
-            {
-              "name": "discrepancyReasonId",
-              "description": "차이 사유의 고유 식별자."
-            }
-          ]
+          "description": "세탁물 수량 차이 발생 시 선택할 수 있는 사유 목록을 관리하는 최상위 컬렉션입니다. 관리자만 CRUD 권한을 가지며, 모든 사용자는 사유 목록을 읽을 수 있습니다."
         }
       },
       {
-        "path": "/requests/{collectionRequestId}",
+        "path": "/roles_admin/{adminUid}",
+        "definition": {
+          "entityName": "AdminRole",
+          "schema": {
+            "$ref": "#/backend/entities/User"
+          },
+          "description": "관리자 역할 사용자(`uid`)를 식별하기 위한 컬렉션입니다. 문서의 존재 여부만으로 관리자 권한을 빠르게 확인할 수 있습니다. 문서의 내용은 비워두거나 단순 `true` 값으로 설정할 수 있습니다."
+        }
+      },
+      {
+        "path": "/collectionRequests/{collectionRequestId}",
         "definition": {
           "entityName": "CollectionRequest",
           "schema": {
             "$ref": "#/backend/entities/CollectionRequest"
           },
-          "description": "세탁물 수거 요청의 핵심 정보를 담는 컬렉션입니다. `hospitalId`, `requestedById`, `driverId`, `status` 필드를 포함하여 다양한 역할(병원 담당자, 기사, 공장 작업자, 관리자)의 QAP(Query-Aware Permissions) 및 Authorization Independence를 지원합니다. 이 필드들은 하위 컬렉션으로도 denormalize 됩니다.",
+          "description": "병원 세탁물 수거 요청의 핵심 정보를 담는 최상위 컬렉션입니다. 이 문서에는 `hospitalId` (요청 병원)와 `requestorId` (요청자)가 Denormalized 되어, 요청을 생성한 병원 담당자, 관련된 기사, 공장 작업자, 관리자가 직접적인 `get()` 호출 없이도 접근 권한을 확인할 수 있도록 합니다. 또한 `currentStatus`, `assignedPickupDriverId`, `assignedDeliveryDriverId` (필요 시) 필드를 포함하여 쿼리 가능한 접근 패턴을 지원합니다.",
           "params": [
             {
               "name": "collectionRequestId",
-              "description": "수거 요청의 고유 식별자."
+              "description": "수거 요청의 고유 식별자입니다."
             }
           ]
         }
       },
       {
-        "path": "/requests/{collectionRequestId}/request_items/{requestItemId}",
+        "path": "/collectionRequests/{collectionRequestId}/items/{collectionRequestItemId}",
         "definition": {
-          "entityName": "RequestItem",
+          "entityName": "CollectionRequestItem",
           "schema": {
-            "$ref": "#/backend/entities/RequestItem"
+            "$ref": "#/backend/entities/CollectionRequestItem"
           },
-          "description": "특정 수거 요청에 포함된 개별 세탁 품목의 상세 정보를 담는 서브컬렉션입니다. 부모 컬렉션의 `hospitalId`, `driverId`, `requestedById`, `status` 필드를 denormalize하여 Authorization Independence를 확보합니다.",
+          "description": "특정 수거 요청에 포함된 개별 세탁 품목의 상세 정보를 관리하는 하위 컬렉션입니다. 이 문서에는 부모 `CollectionRequest`의 `hospitalId`와 `requestorId`가 Denormalized 되어, 품목 단위의 접근 규칙을 부모 요청에 대한 `get()` 없이도 확인할 수 있습니다.",
           "params": [
             {
               "name": "collectionRequestId",
-              "description": "부모 수거 요청의 고유 식별자."
+              "description": "상위 수거 요청의 고유 식별자입니다."
             },
             {
-              "name": "requestItemId",
-              "description": "요청 상세 품목의 고유 식별자."
+              "name": "collectionRequestItemId",
+              "description": "수거 요청 품목 상세의 고유 식별자입니다."
             }
           ]
         }
       },
       {
-        "path": "/requests/{collectionRequestId}/photos/{photoId}",
+        "path": "/collectionRequests/{collectionRequestId}/driverVerifications/{driverVerificationId}",
         "definition": {
-          "entityName": "Photo",
+          "entityName": "DriverVerification",
           "schema": {
-            "$ref": "#/backend/entities/Photo"
+            "$ref": "#/backend/entities/DriverVerification"
           },
-          "description": "특정 수거 요청 또는 그 상세 품목과 관련된 사진 정보를 담는 서브컬렉션입니다. 부모 컬렉션의 `hospitalId`, `driverId`, `requestedById`, `status` 필드를 denormalize하여 Authorization Independence를 확보합니다.",
+          "description": "수거 기사가 현장에서 세탁물 수량을 확인한 정보를 관리하는 하위 컬렉션입니다. 이 문서에는 부모 `CollectionRequest`의 `hospitalId`, `requestorId`, 그리고 `driverId` (확인한 기사)가 Denormalized 되어, 규칙에서 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다.",
           "params": [
             {
               "name": "collectionRequestId",
-              "description": "부모 수거 요청의 고유 식별자."
+              "description": "관련 수거 요청의 고유 식별자입니다."
             },
             {
-              "name": "photoId",
-              "description": "사진의 고유 식별자."
+              "name": "driverVerificationId",
+              "description": "기사 확인 정보의 고유 식별자입니다."
             }
           ]
         }
       },
       {
-        "path": "/requests/{collectionRequestId}/process_logs/{processLogId}",
+        "path": "/collectionRequests/{collectionRequestId}/factoryInbounds/{factoryInboundId}",
         "definition": {
-          "entityName": "ProcessLog",
+          "entityName": "FactoryInbound",
           "schema": {
-            "$ref": "#/backend/entities/ProcessLog"
+            "$ref": "#/backend/entities/FactoryInbound"
           },
-          "description": "특정 수거 요청의 공정 상태 변화 이력을 기록하는 서브컬렉션입니다. 부모 컬렉션의 `hospitalId`, `driverId`, `requestedById`, `status` 필드를 denormalize하여 Authorization Independence를 확보합니다.",
+          "description": "세탁 공장에서 세탁물이 입고될 때 확인한 정보를 관리하는 하위 컬렉션입니다. 이 문서에는 부모 `CollectionRequest`의 `hospitalId`, `requestorId`, 그리고 `inboundOperatorId` (입고 처리 작업자)가 Denormalized 되어, 규칙에서 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다.",
           "params": [
             {
               "name": "collectionRequestId",
-              "description": "부모 수거 요청의 고유 식별자."
+              "description": "관련 수거 요청의 고유 식별자입니다."
             },
             {
-              "name": "processLogId",
-              "description": "공정 로그의 고유 식별자."
+              "name": "factoryInboundId",
+              "description": "공장 입고 정보의 고유 식별자입니다."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/collectionRequests/{collectionRequestId}/deliveryItems/{deliveryItemId}",
+        "definition": {
+          "entityName": "DeliveryItem",
+          "schema": {
+            "$ref": "#/backend/entities/DeliveryItem"
+          },
+          "description": "세탁 완료 후 병원에 납품된 개별 세탁 품목 정보를 관리하는 하위 컬렉션입니다. 이 문서에는 부모 `CollectionRequest`의 `hospitalId`, `requestorId`, `driverId` (납품 기사), 그리고 `hospitalConfirmerId` (병원 확인자)가 Denormalized 되어, 규칙에서 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다.",
+          "params": [
+            {
+              "name": "collectionRequestId",
+              "description": "관련 수거 요청의 고유 식별자입니다."
+            },
+            {
+              "name": "deliveryItemId",
+              "description": "납품 품목 정보의 고유 식별자입니다."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/collectionRequests/{collectionRequestId}/statusHistory/{processStatusHistoryId}",
+        "definition": {
+          "entityName": "ProcessStatusHistory",
+          "schema": {
+            "$ref": "#/backend/entities/ProcessStatusHistory"
+          },
+          "description": "수거 요청의 상태 변경 이력을 추적하는 하위 컬렉션입니다. 이 문서에는 부모 `CollectionRequest`의 `hospitalId`, `requestorId`, 그리고 `changedById` (상태를 변경한 사용자)가 Denormalized 되어, 규칙에서 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다.",
+          "params": [
+            {
+              "name": "collectionRequestId",
+              "description": "상태 변경이 발생한 수거 요청의 고유 식별자입니다."
+            },
+            {
+              "name": "processStatusHistoryId",
+              "description": "프로세스 상태 이력의 고유 식별자입니다."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/collectionRequests/{collectionRequestId}/attachments/{attachmentId}",
+        "definition": {
+          "entityName": "Attachment",
+          "schema": {
+            "$ref": "#/backend/entities/Attachment"
+          },
+          "description": "특정 수거 요청에 직접 첨부된 사진 파일 정보를 관리하는 하위 컬렉션입니다. 이 문서에는 부모 `CollectionRequest`의 `hospitalId`와 `uploadedById` (사진을 업로드한 사용자)가 Denormalized 되어, 규칙에서 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다.",
+          "params": [
+            {
+              "name": "collectionRequestId",
+              "description": "사진이 첨부된 수거 요청의 고유 식별자입니다."
+            },
+            {
+              "name": "attachmentId",
+              "description": "첨부 파일의 고유 식별자입니다."
             }
           ]
         }
@@ -754,16 +846,36 @@
           "schema": {
             "$ref": "#/backend/entities/Settlement"
           },
-          "description": "병원별 월별 세탁 서비스 정산 데이터를 관리하는 컬렉션입니다. `hospitalId` 필드를 포함하여 병원 담당자가 자신의 병원 정산 내역에만 접근할 수 있도록 QAP를 지원합니다.",
+          "description": "병원별 월별 세탁물 정산 데이터를 관리하는 최상위 컬렉션입니다. 이 문서에는 `hospitalId` (정산 대상 병원)와 `settledById` (정산을 확정 처리한 관리자)가 Denormalized 되어, 병원 담당자가 자신의 병원 정산 데이터에 직접적인 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다. `settlementMonth`와 `status` 필드를 포함하여 효율적인 쿼리를 지원합니다.",
           "params": [
             {
               "name": "settlementId",
-              "description": "정산 데이터의 고유 식별자."
+              "description": "정산 데이터의 고유 식별자입니다."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/settlements/{settlementId}/itemDetails/{settlementItemDetailId}",
+        "definition": {
+          "entityName": "SettlementItemDetail",
+          "schema": {
+            "$ref": "#/backend/entities/SettlementItemDetail"
+          },
+          "description": "월별 정산 내역에 포함된 개별 품목의 상세 정보를 관리하는 하위 컬렉션입니다. 이 문서에는 부모 `Settlement`의 `hospitalId`가 Denormalized 되어, 규칙에서 `get()` 호출 없이 접근 권한을 확인할 수 있도록 합니다.",
+          "params": [
+            {
+              "name": "settlementId",
+              "description": "이 상세 내역이 속한 정산의 고유 식별자입니다."
+            },
+            {
+              "name": "settlementItemDetailId",
+              "description": "정산 품목 상세 내역의 고유 식별자입니다."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable, adhering strictly to the provided core design principles and strategy mandates. \n\n**Authorization Independence via Denormalization (Mandate A):**\n\n1.  **Transactional Data (CollectionRequest & Sub-entities):** For collections such as `/requests/{collectionRequestId}/request_items`, `/requests/{collectionRequestId}/photos`, and `/requests/{collectionRequestId}/process_logs`, critical authorization fields like `hospitalId`, `driverId`, `requestedById`, and the current `status` are explicitly denormalized from their parent `CollectionRequest` document into each sub-document. This is a crucial application of Mandate A. By copying these fields, security rules for sub-documents can evaluate access based solely on `resource.data` (the sub-document itself) and `request.auth`, without needing to perform a `get()` call to the parent `CollectionRequest` document. This eliminates hierarchical authorization dependencies, enabling atomic operations and simplifying rule debugging significantly. For example, a hospital staff member's access to a `RequestItem` can be determined by comparing `resource.data.hospitalId` (on the `RequestItem`) with `get(/users/$(request.auth.uid)).data.hospitalId` (on their *own* user profile, which is permissible).\n\n2.  **User-specific Context:** While `get()` calls on *other* documents are avoided, accessing a user's *own* profile document (`/users/$(request.auth.uid)`) to retrieve their `hospitalId` or primary `role` is considered acceptable and does not violate the spirit of Authorization Independence. This is because the user's own profile is inherently linked to their `request.auth.uid` and acts as a direct extension of their session context, not an external hierarchical dependency. This pattern is used for `hospital_staff` to access data related to their assigned hospital.\n\n**Support for Query-Aware Permissions (QAPs) (Core Principle 4):**\n\n1.  **Structural Segregation (Mandate B):** Each collection is designed with a homogeneous security posture. For example, `/laundry_items` is globally readable for authenticated users (for dropdowns) and writable by admins, clearly segregating it from private user data. This simplifies rules as all documents within a collection share similar access patterns, preventing rules from acting as data filters.\n\n2.  **Denormalized Fields for Filtering:** Key authorization fields like `hospitalId`, `driverId`, `status` are present on the top-level `CollectionRequest` documents (and denormalized into sub-documents as explained above). This directly facilitates efficient and secure `list` queries:\n    *   **Hospital Staff:** Can `list` `/requests` (and their sub-collections) by filtering on `hospitalId == get(/users/$(request.auth.uid)).data.hospitalId`. \n    *   **Drivers:** Can `list` `/requests` (and their sub-collections) by filtering on `driverId == request.auth.uid`.\n    *   **Factory Workers:** Can `list` `/requests` (and their sub-collections) by filtering on specific `status` values relevant to factory operations (e.g., `status >= '공장입고' && status <= '출고'`). \n    *   **Admins:** Have broad read/write access, often conditional on their role existence (`exists(/admin_roles/$(request.auth.uid))`).\n\n3.  **Dedicated Role Collections (Mandate C.4):** Global roles (admin, driver, factory worker) are managed through dedicated top-level collections like `/admin_roles/{userId}`. The mere existence of a document at these paths grants the respective role. This provides a clear and efficient way to check roles directly within security rules using `exists()` without complex queries or `get()` calls on arbitrary documents, directly supporting QAPs by enabling simple role-based access to broader collections.\n\nBy combining denormalization for sub-collections, explicit role collections, and user-specific context access, the structure ensures that security rules are straightforward to write, robust against `get()` limitations, and enable efficient, secure querying for all user roles."
+    "reasoning": "The Firestore structure is designed to be secure, scalable, and debuggable by strictly adhering to the core design principles and mandates. \n\n**Authorization Independence (CRITICAL) via Denormalization:**\nTo eliminate the need for `get()` calls in security rules and enable atomic operations, authorization context is extensively denormalized. For entities like `CollectionRequest` and `Settlement`, and their associated subcollections, critical identifiers such as `hospitalId`, `requestorId`, `driverId`, `inboundOperatorId`, `hospitalConfirmerId`, and `uploadedById` are copied directly into the documents. For example, `collectionRequests/{collectionRequestId}/items/{collectionRequestItemId}` will explicitly include `hospitalId` and `requestorId` from its parent `CollectionRequest`. This allows security rules to evaluate access based solely on the document being requested, making rules simpler, more robust, and easier to debug, as they do not depend on data from other documents.\n\n**Structural Segregation for Homogeneous Security Posture:**\nCollections are designed such that all documents within them share a similar security posture. For instance, `hospitals`, `laundryItems`, `discrepancyReasons`, and `users` are top-level collections, each with clear access patterns (e.g., `laundryItems` is largely read-only for most roles but writable by administrators). Role-based access is further simplified by dedicated top-level collections like `/roles_admin/{uid}` for quick existence checks, adhering to the DBAC principle.\n\n**Access Modeling and QAPs (Rules are not Filters):**\n1.  **Private Data:** `users/{userId}` stores user profiles, with each user primarily having access to their own document. Administrator roles are managed via separate `/roles_admin/{uid}` collections for clear, direct authorization. hospital contacts' authorization also leverages their `User.hospitalId` and `User.role` fields.\n2.  **Hierarchical Paths for User-Owned Data:** While `CollectionRequest` itself is a top-level entity due to its collaborative nature, its related details like `CollectionRequestItem`, `DriverVerification`, `FactoryInbound`, `DeliveryItem`, `ProcessStatusHistory`, and `Attachment` are organized as subcollections under the specific `CollectionRequest`. This structure naturally ties these details to their parent request, making their context clear.\n3.  **Collaborative Data:** `CollectionRequest` and `Settlement` are central to the collaborative workflow. By denormalizing `hospitalId`, `requestorId`, `driverId`, `inboundOperatorId`, and `hospitalConfirmerId` directly into these documents and their subcollections, we enable efficient and secure queryable access patterns (QAPs).\n    *   **Hospital Contact:** Can query `collectionRequests` and `settlements` by their `hospitalId` or `requestorId` to see only relevant data. For example, a hospital contact can list their hospital's requests using `where('hospitalId', '==', request.auth.token.hospitalId)`. \n    *   **Driver:** Can query `collectionRequests` with `assignedPickupDriverId` or `assignedDeliveryDriverId` (if these fields are added to `CollectionRequest` for assignment, otherwise they query `driverVerifications` or `deliveryItems` by their `driverId`). \n    *   **Factory Operator:** Can query `collectionRequests` by `currentStatus` (e.g., '수거완료', '공장입고') to see their work queue.\n    *   **Administrator:** Has broad access across all collections.\n\nThis design ensures that client-side queries can be directly translated into secure Firestore rules, minimizing the risk of data leakage and improving performance by avoiding client-side filtering."
   }
 }

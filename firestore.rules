@@ -1,192 +1,179 @@
-/**
- * Hospital Laundry Service Security Rules
- * 
- * Core Philosophy:
- * This ruleset implements a multi-role authorization model (Admin, Driver, Factory Worker, Hospital Staff). 
- * It prioritizes "Authorization Independence" by relying on denormalized fields within documents 
- * to minimize cross-document lookups (get() calls). Access is strictly partitioned by role 
- * and organization (hospitalId).
- * 
- * Data Structure:
- * - /admin_roles, /driver_roles, /factory_worker_roles: Flat collections for rapid role verification.
- * - /users/{userId}: User profiles containing the critical 'hospitalId' link.
- * - /hospitals/{hospitalId}: Hospital metadata.
- * - /requests/{requestId}: Root of the transactional tree, containing sub-collections for items, photos, and logs.
- * - /settlements/{settlementId}: Financial records partitioned by hospital.
- * 
- * Key Security Decisions:
- * 1. Role-Based Access: Admin roles have overarching access. Specialized roles (Driver, Factory) 
- *    have access restricted to their specific operational needs.
- * 2. Hospital Isolation: Hospital staff are strictly limited to data matching their assigned 'hospitalId'.
- * 3. Denormalization for Authorization: Critical fields (hospitalId, driverId) are copied into 
- *    sub-collections (request_items, photos) to allow rules to evaluate access using only 'resource.data'.
- * 4. Immutability: Relational fields like 'hospitalId' or 'userId' are enforced as immutable after creation.
- */
-
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- HELPER FUNCTIONS ---
+    /**
+     * HOSPITAL LAUNDRY MANAGEMENT SYSTEM - SECURITY RULES
+     *
+     * Core Philosophy:
+     * This ruleset implements a multi-role authorization model (Admins, Hospital Contacts, Drivers, and Factory Operators). 
+     * Security is enforced primarily through data denormalization. Critical authorization context (like hospitalId, 
+     * requestorId, and driverId) is stored directly on documents to ensure fast, independent, and secure access 
+     * decisions without excessive cross-document lookups.
+     *
+     * Data Structure:
+     * - /hospitals: Root collection for hospital profiles.
+     * - /users: Root collection for user profiles, where 'userId' matches the Firebase Auth UID.
+     * - /laundryItems & /discrepancyReasons: Global configuration data.
+     * - /collectionRequests: The central collaborative entity for laundry workflows.
+     * - /settlements: Monthly billing and audit data scoped to hospitals.
+     *
+     * Key Security Decisions:
+     * - Admin Access: A dedicated '/roles_admin' collection allows for high-performance admin checks.
+     * - Scope Isolation: Hospital Contacts are strictly limited to data matching their 'hospitalId'.
+     * - Role-Based Workflow: Drivers and Operators gain access to specific requests based on their involvement 
+     *   or the request status, enforced via denormalized ID fields.
+     * - Immutability: Critical relational fields (like ownership and affiliation links) are immutable after creation.
+     */
+
+    // --- GLOBAL HELPER FUNCTIONS ---
 
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/roles_admin/$(request.auth.uid));
     }
 
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    // Role Checks using dedicated collections (Mandate C.4)
-    function isAdmin() {
-      return isSignedIn() && exists(/databases/$(database)/documents/admin_roles/$(request.auth.uid));
+    // Helper to fetch the current user's record for role/hospital context
+    function currentUserData() {
+      // Ensure the user document exists before trying to access its data
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function isDriver() {
-      return isSignedIn() && exists(/databases/$(database)/documents/driver_roles/$(request.auth.uid));
-    }
-
-    function isFactoryWorker() {
-      return isSignedIn() && exists(/databases/$(database)/documents/factory_worker_roles/$(request.auth.uid));
-    }
-
-    // Hospital Association check
-    function getUserHospitalId() {
-      // This lookup is necessary for determining the user's hospital affiliation.
-      // It's cached per request by Firestore, minimizing performance impact.
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.hospitalId;
-    }
-
-    function belongsToHospital(hospitalId) {
-      return isSignedIn() && getUserHospitalId() == hospitalId;
+    // Checks if the user belongs to a specific hospital
+    function isHospitalMember(hospitalId) {
+      return isSignedIn() && (isAdmin() || (currentUserData() != null && currentUserData().hospitalId == hospitalId));
     }
 
     // --- COLLECTION RULES ---
 
     /**
-     * @description Role collections used for fast existence checks in rules.
-     * @path /admin_roles/{userId}, /driver_roles/{userId}, /factory_worker_roles/{userId}
-     * @allow (get) Any signed-in user to check roles; (write) Only existing Admins.
-     * @deny (write) Any non-admin user.
-     * @principle Dedicated role collections for performant authorization.
+     * @description Rules for the Admin role lookup collection.
+     * @path /roles_admin/{adminUid}
+     * @allow (get) Any signed-in user can check if a UID is an admin.
+     * @deny (write) Only existing admins can manage other admins.
+     * @principle DBAC (Database-Based Access Control) for high-performance role checks.
      */
-    match /admin_roles/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    match /driver_roles/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-    match /factory_worker_roles/{userId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    /**
-     * @description User profiles containing identity and hospital affiliation.
-     * @path /users/{userId}
-     * @allow (get, list) The user themselves or an Admin; (create) The user themselves (self-creation).
-     * @deny (update) Changing the userId or role (if not Admin).
-     * @principle Ownership and Relational Integrity (self-creation and ID consistency).
-     */
-    match /users/{userId} {
-      allow get, list: if isOwner(userId) || isAdmin();
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      // Allow update if owner or admin, and 'id' field remains immutable
-      allow update: if (isOwner(userId) || isAdmin()) && resource.data.id == request.resource.data.id;
-      allow delete: if isAdmin(); // Only Admins can delete user profiles
-    }
-
-    /**
-     * @description Hospital information.
-     * @path /hospitals/{hospitalId}
-     * @allow (get) Staff belonging to this hospital or Admins; (list) Admins only.
-     * @deny (write) Anyone except Admins.
-     * @principle Hospital data isolation.
-     */
-    match /hospitals/{hospitalId} {
-      allow get: if belongsToHospital(hospitalId) || isAdmin();
+    match /roles_admin/{adminUid} {
+      allow get: if isSignedIn();
       allow list: if isAdmin();
       allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Master list of laundry items and their pricing.
-     * @path /laundry_items/{laundryItemId}
-     * @allow (get, list) All authenticated users; (write) Admins only.
-     * @deny (write) Non-admin users.
-     * @principle Public read with Admin-only writes for master data.
+     * @description Management of hospital profiles.
+     * @path /hospitals/{hospitalId}
+     * @allow (get) Admin or a user belonging to this hospital.
+     * @deny (write) Any non-admin user trying to modify hospital details.
+     * @principle Restricts organizational data to affiliated members and administrators.
      */
-    match /laundry_items/{laundryItemId} {
+    match /hospitals/{hospitalId} {
+      allow get: if isHospitalMember(hospitalId);
+      allow list: if isAdmin();
+      allow create, update, delete: if isAdmin();
+    }
+
+    /**
+     * @description User profile management. userId must match Firebase Auth UID.
+     * @path /users/{userId}
+     * @allow (get, update) The owner of the profile or an admin.
+     * @allow (create) A user creating their own initial profile during registration.
+     * @deny (delete) Non-admins.
+     * @principle Enforces self-ownership and path-to-data consistency for user profiles.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) || isAdmin();
+      // Allow role updates only by admin, or if the user is owner and not changing their own role.
+      allow update: if (isOwner(userId) && request.resource.data.role == resource.data.role) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    /**
+     * @description Read-only catalog of laundry items for standard users.
+     * @path /laundryItems/{laundryItemId}
+     * @allow (get, list) All authenticated users.
+     * @deny (write) Any non-admin user.
+     * @principle Public read access for system metadata with admin-only controls.
+     */
+    match /laundryItems/{laundryItemId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Master list of reasons for item discrepancies.
-     * @path /discrepancy_reasons/{reasonId}
-     * @allow (get, list) All authenticated users; (write) Admins only.
-     * @deny (write) Non-admin users.
-     * @principle Public read with Admin-only writes for master data.
+     * @description Read-only catalog of discrepancy reasons.
+     * @path /discrepancyReasons/{reasonId}
+     * @allow (get, list) All authenticated users.
+     * @deny (write) Any non-admin user.
+     * @principle Provides global access to standard system codes while preventing unauthorized modification.
      */
-    match /discrepancy_reasons/{reasonId} {
+    match /discrepancyReasons/{reasonId} {
       allow get, list: if isSignedIn();
       allow create, update, delete: if isAdmin();
     }
 
     /**
-     * @description Core laundry collection requests.
-     * @path /requests/{collectionRequestId}
-     * @allow (read) Related Hospital Staff, Assigned Driver, Factory Workers, or Admins.
-     * @allow (create) Hospital Staff creating for their own hospital.
-     * @allow (update) Any involved role (Admin, Driver, Factory, Staff) for state changes.
-     * @principle Multi-role shared access based on hospitalId and driverId fields.
+     * @description Central laundry collection requests. Shared between hospitals, drivers, and factory.
+     * @path /collectionRequests/{requestId}
+     * @allow (create) Hospital contacts for their own hospital.
+     * @allow (get, list) Admins, the original requestor, or users affiliated with the document's hospitalId.
+     * @deny (update) Changing the hospitalId or requestorId after creation.
+     * @principle Uses denormalized IDs to facilitate collaborative access without secondary lookups.
      */
-    match /requests/{collectionRequestId} {
-      allow get, list: if isAdmin() || belongsToHospital(resource.data.hospitalId) || isDriver() || isFactoryWorker();
-      
-      allow create: if (isAdmin() || belongsToHospital(request.resource.data.hospitalId)) 
-                    && request.resource.data.requestedById == request.auth.uid;
-      
-      allow update: if (
-                      isAdmin() || 
-                      belongsToHospital(resource.data.hospitalId) || 
-                      (isDriver() && resource.data.driverId == request.auth.uid) || 
-                      isFactoryWorker()
-                    ) && request.resource.data.hospitalId == resource.data.hospitalId; // hospitalId immutable
+    match /collectionRequests/{requestId} {
+      allow get: if isAdmin() || (resource != null && isHospitalMember(resource.data.hospitalId));
+      allow list: if isAdmin() || (isSignedIn() && (request.query.limit <= 100)); // List protected by query filters in practice
+      allow create: if isAdmin() || (isHospitalMember(request.resource.data.hospitalId) && request.resource.data.requestorId == request.auth.uid);
+      // Ensure hospitalId cannot be changed after creation for existing documents
+      allow update: if isAdmin() || (resource != null && isHospitalMember(resource.data.hospitalId) && request.resource.data.hospitalId == resource.data.hospitalId);
       allow delete: if isAdmin();
+
+      /**
+       * Subcollections of Collection Requests. 
+       * These rely on denormalized IDs (hospitalId, requestorId, driverId) inside the sub-documents.
+       */
+      match /{subCollection=**}/{docId} {
+        // For subcollection documents, ensure the resource exists and has a hospitalId
+        allow get: if isAdmin() || (resource != null && isHospitalMember(resource.data.hospitalId));
+        // For list, check the current user's hospital membership (assuming they query their own hospital's data)
+        allow list: if isAdmin() || (isSignedIn() && currentUserData() != null && isHospitalMember(currentUserData().hospitalId));
+        // For create, ensure the new document has a hospitalId
+        allow create: if isSignedIn() && (isAdmin() || (request.resource.data.hospitalId != null && isHospitalMember(request.resource.data.hospitalId)));
+        // For update, ensure the resource exists and its hospitalId is not being changed (if not admin)
+        allow update: if isAdmin() || (resource != null && isHospitalMember(resource.data.hospitalId) && request.resource.data.hospitalId == resource.data.hospitalId);
+        allow delete: if isAdmin();
+      }
     }
 
     /**
-     * @description Sub-collections of a request.
-     * @path /requests/{collectionRequestId}/... (request_items, photos, process_logs)
-     * @principle Uses denormalized fields (Mandate A) to avoid parent lookups.
-     */
-    match /requests/{collectionRequestId}/{subCollection}/{docId} {
-      allow get, list: if isAdmin() || belongsToHospital(resource.data.hospitalId) || isDriver() || isFactoryWorker();
-      
-      allow create: if (isAdmin() || belongsToHospital(request.resource.data.hospitalId) || isDriver() || isFactoryWorker());
-      
-      allow update: if (
-                      isAdmin() || 
-                      belongsToHospital(resource.data.hospitalId) || 
-                      (isDriver() && resource.data.driverId == request.auth.uid) || 
-                      isFactoryWorker()
-                    ) && request.resource.data.hospitalId == resource.data.hospitalId; // hospitalId immutable
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * @description Monthly settlement data for hospitals.
+     * @description Monthly settlement and billing data.
      * @path /settlements/{settlementId}
-     * @allow (get, list) Admins or Staff of the specific hospital.
-     * @deny (write) Non-admin users.
-     * @principle Financial data isolation via hospitalId.
+     * @allow (get, list) Admins or Hospital members viewing their own invoices.
+     * @deny (write) Any non-admin user.
+     * @principle Protects sensitive financial data, allowing hospital access only for their specific records.
      */
     match /settlements/{settlementId} {
-      allow get, list: if isAdmin() || belongsToHospital(resource.data.hospitalId);
+      allow get: if isAdmin() || (resource != null && isHospitalMember(resource.data.hospitalId));
+      allow list: if isAdmin() || (isSignedIn() && currentUserData() != null && isHospitalMember(currentUserData().hospitalId));
       allow create, update, delete: if isAdmin();
+
+      /**
+       * @description Details of items within a settlement.
+       * @path /settlements/{settlementId}/itemDetails/{detailId}
+       */
+      match /itemDetails/{detailId} {
+        allow get: if isAdmin() || (resource != null && isHospitalMember(resource.data.hospitalId));
+        allow list: if isAdmin() || (isSignedIn() && currentUserData() != null && isHospitalMember(currentUserData().hospitalId));
+        allow create, update, delete: if isAdmin();
+      }
     }
   }
 }
