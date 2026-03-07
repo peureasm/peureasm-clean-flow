@@ -11,7 +11,7 @@ import { collection, query, where, orderBy, limit } from 'firebase/firestore';
 import { Badge } from '@/components/ui/badge';
 
 export default function HospitalDashboard() {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
   // 사용자의 병원 ID를 기반으로 요청 쿼리 생성
@@ -20,14 +20,16 @@ export default function HospitalDashboard() {
   const hospitalId = 'h1'; 
 
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    // 중요: firestore와 user가 모두 준비된 경우에만 쿼리를 생성합니다.
+    if (!firestore || !user) return null;
+    
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', '==', hospitalId),
       orderBy('createdAt', 'desc'),
       limit(5)
     );
-  }, [firestore]);
+  }, [firestore, user, hospitalId]);
 
   const { data: myRequests, isLoading } = useCollection(requestsQuery);
 
@@ -35,6 +37,10 @@ export default function HospitalDashboard() {
     totalThisMonth: myRequests?.length || 0,
     pending: myRequests?.filter(r => r.currentStatus === '제출').length || 0
   };
+
+  if (isUserLoading) {
+    return <div className="p-8 text-center">사용자 인증 확인 중...</div>;
+  }
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-lg mx-auto sm:max-w-7xl">
@@ -76,7 +82,7 @@ export default function HospitalDashboard() {
         </div>
 
         {isLoading ? (
-          <div className="py-10 text-center text-muted-foreground">로딩 중...</div>
+          <div className="py-10 text-center text-muted-foreground">데이터 로딩 중...</div>
         ) : myRequests && myRequests.length > 0 ? (
           myRequests.map((req) => (
             <Card key={req.id} className="rounded-2xl overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
@@ -87,7 +93,7 @@ export default function HospitalDashboard() {
                       <p className="text-xs text-muted-foreground font-medium">{req.id}</p>
                       <p className="font-bold">{req.requestDate} 수거 건</p>
                     </div>
-                    <StatusBadge status={req.currentStatus} />
+                    <StatusBadge status={req.currentStatus as any} />
                   </div>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
                     <div className="flex items-center gap-1">

@@ -1,6 +1,7 @@
 
 "use client"
 
+import { useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
@@ -11,7 +12,7 @@ export default function RoleSelector() {
   const router = useRouter();
   const pathname = usePathname();
   const auth = useAuth();
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
 
   const roles: { id: UserRole; label: string; icon: any; color: string }[] = [
     { id: 'HOSPITAL', label: '병원담당자', icon: Hospital, color: 'text-blue-600' },
@@ -22,8 +23,14 @@ export default function RoleSelector() {
 
   const currentRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
+  // 프로토타입 환경에서 사용자가 로그인되어 있지 않으면 자동으로 익명 로그인을 시도합니다.
+  useEffect(() => {
+    if (!isUserLoading && !user && auth) {
+      initiateAnonymousSignIn(auth);
+    }
+  }, [user, isUserLoading, auth]);
+
   const handleRoleSwitch = (roleId: UserRole) => {
-    // 프로토타입 환경이므로 익명 로그인을 통해 세션을 유지합니다.
     if (!user && auth) {
       initiateAnonymousSignIn(auth);
     }
@@ -37,9 +44,9 @@ export default function RoleSelector() {
           역할 전환 (Firebase Auth 연동)
         </span>
         {user ? (
-          <span className="text-[9px] text-emerald-600 font-bold">인증됨</span>
+          <span className="text-[9px] text-emerald-600 font-bold">인증됨 ({user.uid.slice(0, 5)}...)</span>
         ) : (
-          <span className="text-[9px] text-orange-600 font-bold">미인증</span>
+          <span className="text-[9px] text-orange-600 font-bold">인증 대기 중</span>
         )}
       </div>
       {roles.map((role) => (
