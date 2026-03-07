@@ -2,6 +2,7 @@
 import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, CreditCard, LogOut, Package } from 'lucide-react';
+import Link from 'next/link';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -40,47 +41,60 @@ function AdminSidebar() {
   return (
     <Sidebar className="border-r border-white/10 bg-slate-900 text-white">
       <SidebarHeader className="h-16 flex items-center px-6 border-b border-white/10">
-        <div className="flex items-center gap-2 font-bold text-accent">
+        <Link href="/admin" className="flex items-center gap-2 font-bold text-accent">
           <LayoutDashboard className="h-6 w-6" />
           <span className="text-xl tracking-tight text-white">MediLaundry</span>
-        </div>
+        </Link>
       </SidebarHeader>
       <SidebarContent className="p-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 active:bg-accent/20 active:text-accent h-12" tooltip="대시보드">
-              <LayoutDashboard /> <span>대시보드</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="대시보드">
+              <Link href="/admin">
+                <LayoutDashboard /> <span>대시보드</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="병원 관리">
-              <Hospital /> <span>병원 관리</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="병원 관리">
+              <Link href="/admin/hospitals">
+                <Hospital /> <span>병원 관리</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="전체 요청">
-              <ClipboardList /> <span>전체 요청 내역</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="전체 요청">
+              <Link href="/admin/requests">
+                <ClipboardList /> <span>전체 요청 내역</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="차이 발생 큐">
-              <AlertCircle className="text-orange-400" /> <span>차이 발생 모니터링</span>
-              <span className="ml-auto bg-orange-500 text-[10px] px-1.5 py-0.5 rounded-full text-white">3</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="차이 발생 큐">
+              <Link href="/admin/discrepancies">
+                <AlertCircle className="text-orange-400" /> <span>차이 발생 모니터링</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="납품 관리">
-              <Package /> <span>납품/출고 관리</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="납품 관리">
+              <Link href="/admin/delivery">
+                <Package /> <span>납품/출고 관리</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="정산">
-              <CreditCard /> <span>정산 관리</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="정산">
+              <Link href="/admin/settlements">
+                <CreditCard /> <span>정산 관리</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
           <SidebarMenuItem>
-            <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="통계">
-              <BarChart3 /> <span>통계 리포트</span>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="통계">
+              <Link href="/admin/stats">
+                <BarChart3 /> <span>통계 리포트</span>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -88,13 +102,17 @@ function AdminSidebar() {
         <div className="mt-auto pt-8 border-t border-white/10">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton className="hover:bg-white/5 h-12" tooltip="설정">
-                <Settings /> <span>시스템 설정</span>
+              <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="설정">
+                <Link href="/admin/settings">
+                  <Settings /> <span>시스템 설정</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton className="hover:bg-destructive/10 text-destructive h-12" tooltip="로그아웃">
-                <LogOut /> <span>로그아웃</span>
+              <SidebarMenuButton asChild className="hover:bg-destructive/10 text-destructive h-12" tooltip="로그아웃">
+                <Link href="/">
+                  <LogOut /> <span>로그아웃</span>
+                </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
