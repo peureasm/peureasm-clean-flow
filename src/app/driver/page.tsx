@@ -7,19 +7,19 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Navigation, Phone, CheckCircle2, ChevronRight, AlertTriangle, ClipboardCheck, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, orderBy } from 'firebase/firestore';
+import { collection, query, where, limit } from 'firebase/firestore';
 
 export default function DriverDashboard() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
-  // 사용자가 로그인된 후에만 수거 대기 중인 요청들을 조회
+  // 인덱스 오류를 방지하기 위해 orderBy를 제거하고 단순 쿼리로 변경
   const collectionQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return query(
       collection(firestore, 'collectionRequests'),
       where('currentStatus', 'in', ['제출', '출고']),
-      orderBy('createdAt', 'desc')
+      limit(20)
     );
   }, [firestore, user]);
 
@@ -28,7 +28,7 @@ export default function DriverDashboard() {
   const collectionList = requests?.filter(r => r.currentStatus === '제출') || [];
   const deliveryList = requests?.filter(r => r.currentStatus === '출고') || [];
 
-  if (isUserLoading) return <div className="p-8 text-center text-slate-400">사용자 확인 중...</div>;
+  if (isUserLoading) return <div className="p-12 text-center text-slate-400 font-bold bg-slate-900 min-h-screen">인증 확인 중...</div>;
 
   return (
     <div className="p-4 space-y-6">
@@ -38,7 +38,7 @@ export default function DriverDashboard() {
       </section>
 
       <div className="space-y-4">
-        <h2 className="text-xs font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest">
+        <h2 className="text-xs font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest px-1">
           <div className="h-2 w-2 rounded-full bg-secondary animate-pulse"></div>
           최우선 방문지
         </h2>
@@ -54,10 +54,10 @@ export default function DriverDashboard() {
                     <h3 className="text-2xl font-black text-white">{collectionList[0].hospitalName}</h3>
                     <div className="flex items-center gap-1.5 text-sm text-slate-300 font-medium">
                       <MapPin className="h-4 w-4 text-secondary" />
-                      <span>지역 거점 병원 (상세 주소 확인 필요)</span>
+                      <span>지역 거점 병원 (주소 확인 필요)</span>
                     </div>
                   </div>
-                  <Badge className="bg-secondary text-secondary-foreground font-black px-3 py-1 rounded-full">수거대기</Badge>
+                  <Badge className="bg-secondary text-secondary-foreground font-black px-3 py-1 rounded-full border-none">수거대기</Badge>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3">
@@ -77,7 +77,7 @@ export default function DriverDashboard() {
                     </div>
                     <div>
                       <p className="text-sm font-black text-white">현장 수거 확인 시작</p>
-                      <p className="text-xs text-slate-400 font-medium">요청 시간: {collectionList[0].desiredPickupTime}</p>
+                      <p className="text-xs text-slate-400 font-medium">배정된 품목 대조</p>
                     </div>
                   </div>
                   <ChevronRight className="h-6 w-6 text-slate-500 group-hover:text-white transition-all" />
@@ -94,7 +94,7 @@ export default function DriverDashboard() {
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">기타 운송 목록</h2>
+        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">기타 운송 목록</h2>
         
         <div className="space-y-3">
           {deliveryList.map((req) => (
@@ -113,23 +113,6 @@ export default function DriverDashboard() {
               </CardContent>
             </Card>
           ))}
-
-          {requests?.filter(r => r.currentStatus === '수거완료').map((req) => (
-            <Card key={req.id} className="bg-slate-800/40 border-none rounded-2xl opacity-70 grayscale">
-              <CardContent className="p-5 flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="h-12 w-12 rounded-2xl bg-slate-900 flex items-center justify-center">
-                    <CheckCircle2 className="h-6 w-6 text-emerald-400" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-200">{req.hospitalName}</p>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">처리 완료</p>
-                  </div>
-                </div>
-                <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 bg-emerald-500/5 font-black">COMPLETED</Badge>
-              </CardContent>
-            </Card>
-          ))}
         </div>
       </section>
 
@@ -142,7 +125,7 @@ export default function DriverDashboard() {
           <div className="space-y-1">
             <p className="text-base font-black text-amber-400">업무 공지</p>
             <p className="text-sm text-slate-200 leading-relaxed">
-              공장 설비 보수로 인해 <span className="text-amber-400 font-bold">오후 납품 차량 진입로가 변경</span>되었습니다. 센터 입구 안내를 확인해 주세요.
+              공장 설비 보수로 인해 오후 납품 차량 진입로가 변경되었습니다. 입구 안내를 확인하세요.
             </p>
           </div>
         </CardContent>
