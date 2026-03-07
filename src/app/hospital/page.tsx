@@ -3,11 +3,11 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Plus, Package, Clock } from 'lucide-react';
+import { ChevronRight, Plus, Package, Clock, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
+import { collection, query, where, limit, doc } from 'firebase/firestore';
 
 export default function HospitalDashboard() {
   const { user, isUserLoading } = useUser();
@@ -21,19 +21,18 @@ export default function HospitalDashboard() {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 쿼리는 사용자 프로필이 로드되고 hospitalId가 확실히 있을 때만 실행합니다.
+  // 복합 인덱스 오류를 피하기 위해 orderBy를 제거하고 단순 필터만 적용합니다.
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || isUserDocLoading || !userData?.hospitalId) return null;
+    if (!firestore || !user || !userData?.hospitalId) return null;
     
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', '==', userData.hospitalId),
-      orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(10) // 넉넉하게 가져온 뒤 클라이언트에서 정렬하거나 그대로 보여줍니다.
     );
-  }, [firestore, user, userData?.hospitalId, isUserDocLoading]);
+  }, [firestore, user, userData?.hospitalId]);
 
-  const { data: myRequests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
+  const { data: myRequests, isLoading: isRequestsLoading, error: requestsError } = useCollection(requestsQuery);
 
   const stats = {
     totalThisMonth: myRequests?.length || 0,
@@ -49,12 +48,23 @@ export default function HospitalDashboard() {
     );
   }
 
-  // 프로필이 없는 경우 (최초 접속 시 RoleSelector가 생성 중일 수 있음)
+  if (requestsError) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center gap-4 text-destructive">
+        <AlertCircle className="h-12 w-12" />
+        <p className="font-bold">데이터를 불러오지 못했습니다.</p>
+        <p className="text-xs">{requestsError.message}</p>
+        <Button onClick={() => window.location.reload()} variant="outline" size="sm">다시 시도</Button>
+      </div>
+    );
+  }
+
+  // 프로필이 없는 경우
   if (!userData?.hospitalId) {
     return (
       <div className="p-8 text-center flex flex-col items-center gap-4">
         <Package className="h-12 w-12 text-slate-200 animate-pulse" />
-        <p className="text-muted-foreground">병원 정보를 설정하고 있습니다...</p>
+        <p className="text-muted-foreground">병원 정보를 설정하고 있습니다. (하단 역할 전환을 다시 클릭해보세요)</p>
       </div>
     );
   }
@@ -63,7 +73,7 @@ export default function HospitalDashboard() {
     <div className="p-4 sm:p-6 space-y-6 max-w-lg mx-auto sm:max-w-7xl">
       <section className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">반갑습니다, {userData?.name || '담당자'}님</h1>
-        <p className="text-muted-foreground">{userData?.hospitalId === 'h1' ? '서울메디컬병원' : '등록된 병원'}의 수거 현황입니다.</p>
+        <p className="text-muted-foreground">현재 소속: <strong>{userData?.hospitalId === 'h1' ? '서울메디컬병원' : userData?.hospitalId}</strong></p>
       </section>
 
       <div className="grid grid-cols-2 gap-4">
@@ -71,7 +81,7 @@ export default function HospitalDashboard() {
           <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-1">
             <Package className="h-8 w-8 text-primary" />
             <p className="text-2xl font-bold">{stats.totalThisMonth}건</p>
-            <p className="text-xs text-muted-foreground">최근 요청 수</p>
+            <p className="text-xs text-muted-foreground">조회된 요청 수</p>
           </CardContent>
         </Card>
         <Card className="border-none shadow-sm bg-secondary/5">
@@ -134,14 +144,12 @@ export default function HospitalDashboard() {
       <Card className="bg-slate-900 text-white rounded-2xl border-none">
         <CardContent className="p-6 space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-lg">실시간 보안 연동</h3>
+            <h3 className="font-bold text-lg">실시간 상태 정보</h3>
           </div>
           <p className="text-sm text-slate-300">
-            사용자 역할: <strong>{userData?.role}</strong><br />
-            병원 ID: <strong>{userData?.hospitalId}</strong>
-          </p>
-          <p className="text-[11px] text-slate-400">
-            Firestore Security Rules가 귀하의 병원 데이터만 안전하게 필터링하여 보여줍니다.
+            인증 UID: <strong>{user?.uid.slice(0, 8)}...</strong><br />
+            역할: <strong>{userData?.role}</strong><br />
+            소속 ID: <strong>{userData?.hospitalId}</strong>
           </p>
         </CardContent>
       </Card>
