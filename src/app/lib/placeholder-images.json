@@ -1,0 +1,29 @@
+
+{
+  "placeholderImages": [
+    {
+      "id": "hospital-laundry-1",
+      "description": "Hospital bed sheets and linens",
+      "imageUrl": "https://picsum.photos/seed/hosp1/600/400",
+      "imageHint": "hospital laundry"
+    },
+    {
+      "id": "hospital-laundry-2",
+      "description": "Hospital patient uniforms",
+      "imageUrl": "https://picsum.photos/seed/hosp2/600/400",
+      "imageHint": "medical uniforms"
+    },
+    {
+      "id": "discrepancy-photo-1",
+      "description": "Stained laundry item",
+      "imageUrl": "https://picsum.photos/seed/disc1/600/400",
+      "imageHint": "stained fabric"
+    },
+    {
+      "id": "factory-laundry",
+      "description": "Industrial laundry machine",
+      "imageUrl": "https://picsum.photos/seed/fact1/800/600",
+      "imageHint": "industrial laundry"
+    }
+  ]
+}
