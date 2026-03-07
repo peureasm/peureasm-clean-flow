@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState } from 'react';
@@ -8,13 +7,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Minus, Camera, Save, Send, ChevronLeft, Trash2 } from 'lucide-react';
+import { Plus, Minus, Save, Send, ChevronLeft, Trash2 } from 'lucide-react';
 import { LAUNDRY_ITEMS } from '@/app/lib/data';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useUser, useDoc, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { doc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, collection } from 'firebase/firestore';
 
 export default function NewRequestPage() {
   const router = useRouter();
@@ -22,7 +21,6 @@ export default function NewRequestPage() {
   const firestore = useFirestore();
   const { user } = useUser();
 
-  // 사용자 프로필 정보를 가져와서 병원 ID를 동적으로 할당하기 위함
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -41,7 +39,6 @@ export default function NewRequestPage() {
   });
   const [notes, setNotes] = useState('');
   const [requestDate, setRequestDate] = useState(new Date().toISOString().split('T')[0]);
-  const [pickupTime, setPickupTime] = useState('오전 10:00');
 
   const updateQty = (id: string, delta: number) => {
     setItems(prev => prev.map(item => 
@@ -72,7 +69,6 @@ export default function NewRequestPage() {
       hospitalName: hName,
       requestorId: user.uid,
       requestDate: requestDate,
-      desiredPickupTime: pickupTime,
       currentStatus: '제출',
       specialNotes: notes,
       isContaminated: flags.contaminated,
@@ -85,7 +81,6 @@ export default function NewRequestPage() {
 
     setDocumentNonBlocking(requestRef, requestData, { merge: true });
 
-    // 품목 상세 저장 (하위 컬렉션) - itemName을 명시적으로 포함
     items.filter(i => i.qty > 0).forEach(i => {
       const itemRef = doc(collection(firestore, `collectionRequests/${requestId}/items`));
       setDocumentNonBlocking(itemRef, {
@@ -93,7 +88,7 @@ export default function NewRequestPage() {
         collectionRequestId: requestId,
         hospitalId: hId,
         laundryItemId: i.id,
-        itemName: i.name, // 누락되었던 품목명을 저장
+        itemName: i.name,
         requestedQuantity: i.qty,
       }, { merge: true });
     });
@@ -117,27 +112,15 @@ export default function NewRequestPage() {
 
       <div className="p-4 space-y-6 pb-32">
         <section className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="date" className="text-xs font-bold text-muted-foreground uppercase">수거 요청일</Label>
-              <Input 
-                id="date" 
-                type="date" 
-                value={requestDate}
-                onChange={(e) => setRequestDate(e.target.value)}
-                className="rounded-xl border-none shadow-sm" 
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="time" className="text-xs font-bold text-muted-foreground uppercase">희망 시간</Label>
-              <Input 
-                id="time" 
-                type="text" 
-                value={pickupTime}
-                onChange={(e) => setPickupTime(e.target.value)}
-                className="rounded-xl border-none shadow-sm" 
-              />
-            </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="date" className="text-xs font-bold text-muted-foreground uppercase">수거 요청일</Label>
+            <Input 
+              id="date" 
+              type="date" 
+              value={requestDate}
+              onChange={(e) => setRequestDate(e.target.value)}
+              className="rounded-xl border-none shadow-sm h-12" 
+            />
           </div>
         </section>
 

@@ -1,4 +1,3 @@
-
 "use client";
 
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,16 +8,10 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 
-/**
- * @fileoverview 병원 담당자 메인 대시보드
- * 실시간으로 Firestore에서 자신의 병원 세탁 요청 현황을 조회합니다.
- */
-
 export default function HospitalDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // 1. 사용자 프로필 로드
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -26,9 +19,7 @@ export default function HospitalDashboard() {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 2. 소속 병원의 수거 요청 목록 조회 (실시간)
   const requestsQuery = useMemoFirebase(() => {
-    // 사용자가 로드되고 hospitalId가 있을 때만 쿼리 실행
     if (!firestore || !userData?.hospitalId) return null;
     
     return query(
@@ -40,7 +31,6 @@ export default function HospitalDashboard() {
 
   const { data: myRequests, isLoading: isRequestsLoading, error: requestsError } = useCollection(requestsQuery);
 
-  // 3. 통계 계산
   const stats = {
     totalThisMonth: myRequests?.length || 0,
     pending: myRequests?.filter(r => ['제출', '수거완료', '공장입고', '세탁중', '건조중', '포장완료', '출고'].includes(r.currentStatus)).length || 0
@@ -143,10 +133,6 @@ export default function HospitalDashboard() {
                       <StatusBadge status={req.currentStatus as any} />
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                        <Clock className="h-3.5 w-3.5" />
-                        <span>{req.desiredPickupTime}</span>
-                      </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
                         <Package className="h-3.5 w-3.5" />
                         <span>{req.specialNotes ? '특이사항 포함' : '일반 품목'}</span>

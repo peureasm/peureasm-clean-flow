@@ -1,11 +1,10 @@
-
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Clock, Package, CheckCircle2, AlertCircle, FileText, ArrowRight, CheckCircle, History, TrendingDown, ClipboardList } from 'lucide-react';
+import { ChevronLeft, Clock, Package, AlertCircle, CheckCircle, History, TrendingDown, ClipboardList } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
