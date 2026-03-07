@@ -28,12 +28,13 @@ export default function HospitalDashboard() {
 
   // 2. 소속 병원의 수거 요청 목록 조회 (실시간)
   const requestsQuery = useMemoFirebase(() => {
+    // 사용자가 로드되고 hospitalId가 있을 때만 쿼리 실행
     if (!firestore || !userData?.hospitalId) return null;
     
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', '==', userData.hospitalId),
-      limit(5)
+      limit(10)
     );
   }, [firestore, userData?.hospitalId]);
 
@@ -42,7 +43,7 @@ export default function HospitalDashboard() {
   // 3. 통계 계산
   const stats = {
     totalThisMonth: myRequests?.length || 0,
-    pending: myRequests?.filter(r => ['제출', '수거완료'].includes(r.currentStatus)).length || 0
+    pending: myRequests?.filter(r => ['제출', '수거완료', '공장입고', '세탁중', '건조중', '포장완료', '출고'].includes(r.currentStatus)).length || 0
   };
 
   if (isUserLoading || isUserDocLoading) {
@@ -168,37 +169,6 @@ export default function HospitalDashboard() {
           </div>
         )}
       </section>
-
-      <Card className="bg-slate-900 text-white rounded-3xl border-none shadow-2xl overflow-hidden relative">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <ShieldCheck className="h-24 w-24" />
-        </div>
-        <CardContent className="p-6 space-y-4 relative z-10">
-          <div className="flex items-center gap-2">
-            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <h3 className="font-bold text-sm text-slate-300 uppercase tracking-widest">System Profile</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1">
-              <p className="text-[10px] text-slate-500 font-bold uppercase">사용자 역할</p>
-              <p className="text-sm font-bold">{userData?.role || 'HOSPITAL'}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-[10px] text-slate-500 font-bold uppercase">인증 고유번호</p>
-              <p className="text-sm font-mono text-emerald-400">{user?.uid.slice(0, 8)}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
     </div>
-  );
-}
-
-function ShieldCheck({ className }: { className?: string }) {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
-      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
-      <path d="m9 12 2 2 4-4"/>
-    </svg>
   );
 }
