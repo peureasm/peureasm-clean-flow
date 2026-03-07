@@ -25,18 +25,17 @@ export default function RoleSelector() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 자동 익명 로그인 및 초기 프로필 생성
+  // 자동 익명 로그인
   useEffect(() => {
     if (!isUserLoading && !user && auth) {
       initiateAnonymousSignIn(auth);
     }
   }, [user, isUserLoading, auth]);
 
-  // 사용자가 로그인되었을 때 기본 프로필이 없으면 생성
+  // 사용자가 로그인되었을 때 프로필 생성/업데이트
   useEffect(() => {
     if (user && firestore && currentPathRole) {
       const userRef = doc(firestore, 'users', user.uid);
-      // 기존 프로필이 없을 수 있으므로 기본값 설정 (이미 있으면 merge됨)
       setDocumentNonBlocking(userRef, {
         id: user.uid,
         username: user.email || `user_${user.uid.slice(0, 5)}`,
@@ -44,7 +43,8 @@ export default function RoleSelector() {
         role: currentPathRole,
         hospitalId: currentPathRole === 'HOSPITAL' ? 'h1' : null,
         isActive: true,
-        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        createdAt: serverTimestamp(), // merge: true이므로 최초에만 생성됨
       }, { merge: true });
     }
   }, [user, firestore, currentPathRole]);

@@ -18,9 +18,10 @@ export default function AdminDashboard() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
+  // 인덱스 오류 가능성을 줄이기 위해 단순화된 쿼리 사용
   const allRequestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'collectionRequests'), orderBy('createdAt', 'desc'), limit(15));
+    return query(collection(firestore, 'collectionRequests'), limit(15));
   }, [firestore, user]);
 
   const { data: requests, isLoading } = useCollection(allRequestsQuery);
