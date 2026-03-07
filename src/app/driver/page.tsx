@@ -6,42 +6,45 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Navigation, Phone, CheckCircle2, ChevronRight, AlertTriangle, ClipboardCheck, Truck } from 'lucide-react';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, orderBy } from 'firebase/firestore';
 
 export default function DriverDashboard() {
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
 
-  // 수거 대기 중인 요청들만 조회
+  // 사용자가 로그인된 후에만 수거 대기 중인 요청들을 조회
   const collectionQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'collectionRequests'),
       where('currentStatus', 'in', ['제출', '출고']),
       orderBy('createdAt', 'desc')
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: requests, isLoading } = useCollection(collectionQuery);
 
   const collectionList = requests?.filter(r => r.currentStatus === '제출') || [];
   const deliveryList = requests?.filter(r => r.currentStatus === '출고') || [];
 
+  if (isUserLoading) return <div className="p-8 text-center text-slate-400">사용자 확인 중...</div>;
+
   return (
     <div className="p-4 space-y-6">
       <section className="space-y-2 py-4">
-        <h1 className="text-2xl font-black text-white">수거 및 납품 경로</h1>
-        <p className="text-slate-300 text-sm font-medium">오늘 예정된 일정 <span className="text-secondary font-bold">{requests?.length || 0}건</span></p>
+        <h1 className="text-2xl font-black text-white">오늘의 운송 경로</h1>
+        <p className="text-slate-300 text-sm font-medium">현재 배정된 일정 <span className="text-secondary font-bold">{requests?.length || 0}건</span></p>
       </section>
 
       <div className="space-y-4">
         <h2 className="text-xs font-black text-slate-400 uppercase flex items-center gap-2 tracking-widest">
           <div className="h-2 w-2 rounded-full bg-secondary animate-pulse"></div>
-          다음 수거 장소
+          최우선 방문지
         </h2>
 
         {isLoading ? (
-          <div className="p-12 text-center text-slate-400 bg-slate-800/50 rounded-3xl border border-white/5">로딩 중...</div>
+          <div className="p-12 text-center text-slate-400 bg-slate-800/50 rounded-3xl border border-white/5 animate-pulse">운행 데이터 로드 중...</div>
         ) : collectionList.length > 0 ? (
           <Card className="bg-slate-800 border-none shadow-2xl rounded-3xl overflow-hidden ring-1 ring-white/10">
             <CardContent className="p-0">
@@ -51,7 +54,7 @@ export default function DriverDashboard() {
                     <h3 className="text-2xl font-black text-white">{collectionList[0].hospitalName}</h3>
                     <div className="flex items-center gap-1.5 text-sm text-slate-300 font-medium">
                       <MapPin className="h-4 w-4 text-secondary" />
-                      <span>서울시 강남구 테헤란로 123</span>
+                      <span>지역 거점 병원 (상세 주소 확인 필요)</span>
                     </div>
                   </div>
                   <Badge className="bg-secondary text-secondary-foreground font-black px-3 py-1 rounded-full">수거대기</Badge>
@@ -59,10 +62,10 @@ export default function DriverDashboard() {
                 
                 <div className="grid grid-cols-2 gap-3">
                   <Button variant="outline" className="border-white/10 bg-slate-700/50 text-white rounded-2xl gap-2 h-14 font-bold hover:bg-slate-700 transition-all">
-                    <Phone className="h-5 w-5" /> 전화하기
+                    <Phone className="h-5 w-5" /> 연락하기
                   </Button>
                   <Button className="bg-secondary text-secondary-foreground rounded-2xl gap-2 h-14 font-black shadow-lg shadow-secondary/20 hover:scale-[1.02] active:scale-95 transition-all">
-                    <Navigation className="h-5 w-5" /> 길안내
+                    <Navigation className="h-5 w-5" /> 내비게이션
                   </Button>
                 </div>
               </div>
@@ -73,8 +76,8 @@ export default function DriverDashboard() {
                       <ClipboardCheck className="h-6 w-6 text-secondary" />
                     </div>
                     <div>
-                      <p className="text-sm font-black text-white">수거 확인 진행</p>
-                      <p className="text-xs text-slate-400 font-medium">{collectionList[0].desiredPickupTime} 예정</p>
+                      <p className="text-sm font-black text-white">현장 수거 확인 시작</p>
+                      <p className="text-xs text-slate-400 font-medium">요청 시간: {collectionList[0].desiredPickupTime}</p>
                     </div>
                   </div>
                   <ChevronRight className="h-6 w-6 text-slate-500 group-hover:text-white transition-all" />
@@ -83,12 +86,15 @@ export default function DriverDashboard() {
             </CardContent>
           </Card>
         ) : (
-          <div className="p-12 text-center text-slate-400 bg-slate-800/50 rounded-3xl border border-dashed border-white/10 font-bold">대기 중인 수거 일정이 없습니다.</div>
+          <div className="p-12 text-center text-slate-400 bg-slate-800/50 rounded-3xl border border-dashed border-white/10 font-bold">
+            <Truck className="h-8 w-8 mx-auto mb-2 opacity-20" />
+            현재 배정된 수거 일정이 없습니다.
+          </div>
         )}
       </div>
 
       <section className="space-y-4">
-        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">남은 일정 목록</h2>
+        <h2 className="text-xs font-black text-slate-400 uppercase tracking-widest px-1">기타 운송 목록</h2>
         
         <div className="space-y-3">
           {deliveryList.map((req) => (
@@ -117,10 +123,10 @@ export default function DriverDashboard() {
                   </div>
                   <div>
                     <p className="font-bold text-slate-200">{req.hospitalName}</p>
-                    <p className="text-[10px] text-slate-500 font-bold uppercase">수거 완료</p>
+                    <p className="text-[10px] text-slate-500 font-bold uppercase">처리 완료</p>
                   </div>
                 </div>
-                <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 bg-emerald-500/5 font-black">DONE</Badge>
+                <Badge variant="outline" className="border-emerald-500/30 text-emerald-500 bg-emerald-500/5 font-black">COMPLETED</Badge>
               </CardContent>
             </Card>
           ))}
@@ -134,8 +140,10 @@ export default function DriverDashboard() {
         <CardContent className="p-6 flex gap-4 relative z-10">
           <AlertTriangle className="h-6 w-6 text-amber-500 shrink-0" />
           <div className="space-y-1">
-            <p className="text-base font-black text-amber-400">시스템 공지</p>
-            <p className="text-sm text-slate-200 leading-relaxed">공장 설비 점검으로 인해 오늘 오후 납품 일정이 <span className="text-amber-400 font-bold">약 30분 정도 지연</span>될 수 있습니다. 배차 일정에 참고해 주세요.</p>
+            <p className="text-base font-black text-amber-400">업무 공지</p>
+            <p className="text-sm text-slate-200 leading-relaxed">
+              공장 설비 보수로 인해 <span className="text-amber-400 font-bold">오후 납품 차량 진입로가 변경</span>되었습니다. 센터 입구 안내를 확인해 주세요.
+            </p>
           </div>
         </CardContent>
       </Card>

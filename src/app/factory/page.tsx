@@ -1,18 +1,19 @@
 
 "use client"
 
-import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState } from 'react';
+import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { LaundryStatus } from '../lib/types';
-import { useFirestore, useCollection, updateDocumentNonBlocking, useMemoFirebase } from '@/firebase';
+import { useFirestore, useCollection, updateDocumentNonBlocking, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
-import { AlertCircle, Clock, Package, MoreVertical, CheckCircle2, ArrowRight } from 'lucide-react';
+import { Package, ArrowRight, Kanban, ListFilter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 
 export default function FactoryKanban() {
   const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
   const { toast } = useToast();
   
   const columns: { title: string; status: LaundryStatus; color: string }[] = [
@@ -24,12 +25,12 @@ export default function FactoryKanban() {
   ];
 
   const factoryQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     return query(
       collection(firestore, 'collectionRequests'),
       where('currentStatus', 'in', columns.map(c => c.status))
     );
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: requests, isLoading } = useCollection(factoryQuery);
 
@@ -40,86 +41,99 @@ export default function FactoryKanban() {
       updatedAt: new Date().toISOString()
     });
     toast({
-      title: "상태 변경 완료",
-      description: `요청이 ${nextStatus} 단계로 이동되었습니다.`,
+      title: "공정 업데이트",
+      description: `세탁물이 [${nextStatus}] 단계로 이동되었습니다.`,
     });
   };
 
-  if (isLoading) return <div className="p-8 text-center">공정 데이터를 불러오는 중...</div>;
+  if (isUserLoading) return <div className="p-8 text-center">인증 대기 중...</div>;
 
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-end">
+    <div className="space-y-6 max-w-[1600px] mx-auto">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-2xl font-bold">공정 칸반 보드</h1>
-          <p className="text-muted-foreground">세탁물의 현재 공정 상태를 실시간으로 관리하세요.</p>
+          <div className="flex items-center gap-2 mb-1">
+            <Kanban className="h-5 w-5 text-purple-600" />
+            <h1 className="text-2xl font-bold text-slate-900">공정 관리 칸반</h1>
+          </div>
+          <p className="text-muted-foreground text-sm">입고된 세탁물의 실시간 공정 상태를 추적하고 관리합니다.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline">공정 리포트</Button>
-          <Button className="bg-purple-700">신규 입고 스캔</Button>
+          <Button variant="outline" className="rounded-xl gap-2 h-11 border-slate-200">
+            <ListFilter className="h-4 w-4" /> 필터링
+          </Button>
+          <Button className="bg-purple-700 rounded-xl px-6 h-11 shadow-lg shadow-purple-200">
+            신규 입고 등록
+          </Button>
         </div>
       </div>
 
-      <div className="flex gap-6 overflow-x-auto pb-8 min-h-[70vh]">
-        {columns.map((col, idx) => (
-          <div key={col.status} className="flex-shrink-0 w-80 space-y-4">
-            <div className="flex items-center justify-between px-2">
-              <div className="flex items-center gap-2">
-                <div className={`h-2.5 w-2.5 rounded-full ${col.color}`}></div>
-                <h2 className="font-bold text-slate-700">{col.title}</h2>
-                <Badge variant="secondary" className="rounded-full">
-                  {requests?.filter(r => r.currentStatus === col.status).length || 0}
+      <div className="flex gap-6 overflow-x-auto pb-8 min-h-[75vh]">
+        {columns.map((col, idx) => {
+          const columnRequests = requests?.filter(r => r.currentStatus === col.status) || [];
+          return (
+            <div key={col.status} className="flex-shrink-0 w-80 space-y-4">
+              <div className="flex items-center justify-between px-3 py-1">
+                <div className="flex items-center gap-2">
+                  <div className={`h-2.5 w-2.5 rounded-full ${col.color}`}></div>
+                  <h2 className="font-bold text-slate-700 text-sm">{col.title}</h2>
+                </div>
+                <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-none font-bold">
+                  {columnRequests.length}
                 </Badge>
               </div>
-            </div>
-            
-            <div className="kanban-column bg-slate-100/50 p-2 rounded-xl min-h-[500px]">
-              {requests?.filter(r => r.currentStatus === col.status).map((req) => (
-                <Card key={req.id} className="rounded-xl border-none shadow-sm hover:shadow-md transition-shadow mb-3 bg-white">
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div className="space-y-1">
-                        <h3 className="font-bold text-sm">{req.hospitalName}</h3>
-                        <p className="text-[10px] text-muted-foreground font-mono uppercase tracking-tighter">{req.id.slice(-8)}</p>
+              
+              <div className="kanban-column bg-slate-100/40 p-3 rounded-2xl min-h-[600px] border border-slate-200/50">
+                {isLoading ? (
+                  <div className="flex items-center justify-center h-20 text-xs text-slate-400 italic">로딩 중...</div>
+                ) : columnRequests.map((req) => (
+                  <Card key={req.id} className="rounded-2xl border-none shadow-sm hover:shadow-md transition-all mb-4 bg-white overflow-hidden group">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="flex justify-between items-start">
+                        <div className="space-y-0.5">
+                          <h3 className="font-bold text-sm text-slate-800 line-clamp-1">{req.hospitalName}</h3>
+                          <p className="text-[10px] text-slate-400 font-mono">#{req.id.slice(-6).toUpperCase()}</p>
+                        </div>
+                        {req.isContaminated && (
+                          <Badge variant="destructive" className="h-5 px-1.5 text-[9px] bg-red-50 text-red-600 border-red-100">오염물</Badge>
+                        )}
                       </div>
-                      {req.isContaminated && (
-                        <Badge variant="destructive" className="h-5 px-1.5 text-[9px]">오염물</Badge>
-                      )}
-                    </div>
-                    
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center gap-1 text-[10px] bg-slate-50 px-1.5 py-0.5 rounded text-slate-600 border border-slate-100">
-                        <Package className="h-3 w-3" />
-                        <span>요청 {req.requestDate.split('-').slice(1).join('/')}</span>
+                      
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1 text-[10px] bg-slate-50 px-2 py-1 rounded-lg text-slate-500 border border-slate-100">
+                          <Package className="h-3 w-3" />
+                          <span>{req.requestDate} 수거건</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <div className="pt-2 border-t flex justify-between items-center">
-                      <span className="text-[10px] text-muted-foreground italic">
-                        {new Date(req.updatedAt || req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} 업데이트
-                      </span>
-                      {idx < columns.length - 1 && (
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
-                          className="h-7 text-[10px] font-bold text-primary gap-1 px-2 bg-primary/5 hover:bg-primary/10"
-                          onClick={() => handleStatusChange(req.id, columns[idx + 1].status)}
-                        >
-                          다음 단계 <ArrowRight className="h-3 w-3" />
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {!requests?.some(r => r.currentStatus === col.status) && (
-                <div className="h-32 border-2 border-dashed border-slate-200 rounded-xl flex items-center justify-center text-slate-400 text-sm">
-                  항목 없음
-                </div>
-              )}
+                      <div className="pt-3 border-t border-slate-50 flex justify-between items-center">
+                        <span className="text-[10px] text-slate-400 italic">
+                          {new Date(req.updatedAt || req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {idx < columns.length - 1 && (
+                          <Button 
+                            size="sm" 
+                            variant="ghost" 
+                            className="h-8 text-[11px] font-bold text-primary gap-1 px-3 bg-primary/5 hover:bg-primary/10 rounded-lg group-hover:bg-primary group-hover:text-white transition-all"
+                            onClick={() => handleStatusChange(req.id, columns[idx + 1].status)}
+                          >
+                            진행 <ArrowRight className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+                {!isLoading && columnRequests.length === 0 && (
+                  <div className="h-32 border-2 border-dashed border-slate-200 rounded-2xl flex flex-col items-center justify-center text-slate-300 gap-2">
+                    <Package className="h-6 w-6 opacity-20" />
+                    <span className="text-[10px] font-bold">항목 없음</span>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
