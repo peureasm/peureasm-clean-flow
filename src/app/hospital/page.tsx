@@ -21,19 +21,17 @@ export default function HospitalDashboard() {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 사용자의 병원 ID를 프로필에서 가져옵니다. (기본값 'h1')
-  const hospitalId = userData?.hospitalId || 'h1'; 
-
+  // 쿼리는 사용자 프로필이 로드되고 hospitalId가 확실히 있을 때만 실행합니다.
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || isUserDocLoading) return null;
+    if (!firestore || !user || isUserDocLoading || !userData?.hospitalId) return null;
     
     return query(
       collection(firestore, 'collectionRequests'),
-      where('hospitalId', '==', hospitalId),
+      where('hospitalId', '==', userData.hospitalId),
       orderBy('createdAt', 'desc'),
       limit(5)
     );
-  }, [firestore, user, hospitalId, isUserDocLoading]);
+  }, [firestore, user, userData?.hospitalId, isUserDocLoading]);
 
   const { data: myRequests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
@@ -51,11 +49,21 @@ export default function HospitalDashboard() {
     );
   }
 
+  // 프로필이 없는 경우 (최초 접속 시 RoleSelector가 생성 중일 수 있음)
+  if (!userData?.hospitalId) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center gap-4">
+        <Package className="h-12 w-12 text-slate-200 animate-pulse" />
+        <p className="text-muted-foreground">병원 정보를 설정하고 있습니다...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-lg mx-auto sm:max-w-7xl">
       <section className="space-y-2">
         <h1 className="text-2xl font-bold tracking-tight">반갑습니다, {userData?.name || '담당자'}님</h1>
-        <p className="text-muted-foreground">{userData?.hospitalId ? '서울메디컬병원' : '병원 정보 없음'}의 수거 현황입니다.</p>
+        <p className="text-muted-foreground">{userData?.hospitalId === 'h1' ? '서울메디컬병원' : '등록된 병원'}의 수거 현황입니다.</p>
       </section>
 
       <div className="grid grid-cols-2 gap-4">
@@ -126,10 +134,14 @@ export default function HospitalDashboard() {
       <Card className="bg-slate-900 text-white rounded-2xl border-none">
         <CardContent className="p-6 space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-lg">실시간 연동 안내</h3>
+            <h3 className="font-bold text-lg">실시간 보안 연동</h3>
           </div>
           <p className="text-sm text-slate-300">
-            {userData?.role} 권한으로 로그인되어 있습니다. Firestore Security Rules가 귀하의 병원 데이터만 안전하게 필터링하여 보여줍니다.
+            사용자 역할: <strong>{userData?.role}</strong><br />
+            병원 ID: <strong>{userData?.hospitalId}</strong>
+          </p>
+          <p className="text-[11px] text-slate-400">
+            Firestore Security Rules가 귀하의 병원 데이터만 안전하게 필터링하여 보여줍니다.
           </p>
         </CardContent>
       </Card>
