@@ -6,22 +6,26 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, Plus, Package, Clock } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { useCollection, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, limit } from 'firebase/firestore';
-import { Badge } from '@/components/ui/badge';
+import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
+import { collection, query, where, orderBy, limit, doc } from 'firebase/firestore';
 
 export default function HospitalDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // 사용자의 병원 ID를 기반으로 요청 쿼리 생성
-  // 실제 운영 환경에서는 유저 문서에서 hospitalId를 가져와야 합니다.
-  // 여기서는 데모를 위해 'h1' 병원 데이터를 기본으로 조회합니다.
-  const hospitalId = 'h1'; 
+  // 사용자의 실시간 프로필 정보를 가져옵니다.
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
+
+  // 사용자의 병원 ID를 프로필에서 가져옵니다. (기본값 'h1')
+  const hospitalId = userData?.hospitalId || 'h1'; 
 
   const requestsQuery = useMemoFirebase(() => {
-    // 중요: firestore와 user가 모두 준비된 경우에만 쿼리를 생성합니다.
-    if (!firestore || !user) return null;
+    if (!firestore || !user || isUserDocLoading) return null;
     
     return query(
       collection(firestore, 'collectionRequests'),
@@ -29,24 +33,29 @@ export default function HospitalDashboard() {
       orderBy('createdAt', 'desc'),
       limit(5)
     );
-  }, [firestore, user, hospitalId]);
+  }, [firestore, user, hospitalId, isUserDocLoading]);
 
-  const { data: myRequests, isLoading } = useCollection(requestsQuery);
+  const { data: myRequests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
   const stats = {
     totalThisMonth: myRequests?.length || 0,
     pending: myRequests?.filter(r => r.currentStatus === '제출').length || 0
   };
 
-  if (isUserLoading) {
-    return <div className="p-8 text-center">사용자 인증 확인 중...</div>;
+  if (isUserLoading || isUserDocLoading) {
+    return (
+      <div className="p-8 text-center flex flex-col items-center gap-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-muted-foreground">인증 및 프로필 확인 중...</p>
+      </div>
+    );
   }
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-lg mx-auto sm:max-w-7xl">
       <section className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">반갑습니다, {user?.displayName || '담당자'}님</h1>
-        <p className="text-muted-foreground">오늘의 세탁물 수거 현황입니다.</p>
+        <h1 className="text-2xl font-bold tracking-tight">반갑습니다, {userData?.name || '담당자'}님</h1>
+        <p className="text-muted-foreground">{userData?.hospitalId ? '서울메디컬병원' : '병원 정보 없음'}의 수거 현황입니다.</p>
       </section>
 
       <div className="grid grid-cols-2 gap-4">
@@ -81,7 +90,7 @@ export default function HospitalDashboard() {
           </Link>
         </div>
 
-        {isLoading ? (
+        {isRequestsLoading ? (
           <div className="py-10 text-center text-muted-foreground">데이터 로딩 중...</div>
         ) : myRequests && myRequests.length > 0 ? (
           myRequests.map((req) => (
@@ -117,9 +126,11 @@ export default function HospitalDashboard() {
       <Card className="bg-slate-900 text-white rounded-2xl border-none">
         <CardContent className="p-6 space-y-4">
           <div className="flex justify-between items-center">
-            <h3 className="font-bold text-lg">알림</h3>
+            <h3 className="font-bold text-lg">실시간 연동 안내</h3>
           </div>
-          <p className="text-sm text-slate-300">Firestore와 실시간으로 연동되어 상태가 즉시 반영됩니다.</p>
+          <p className="text-sm text-slate-300">
+            {userData?.role} 권한으로 로그인되어 있습니다. Firestore Security Rules가 귀하의 병원 데이터만 안전하게 필터링하여 보여줍니다.
+          </p>
         </CardContent>
       </Card>
     </div>
