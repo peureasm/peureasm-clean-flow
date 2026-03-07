@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Camera, AlertCircle, CheckCircle2, Info } from 'lucide-react';
+import { ChevronLeft, Camera, AlertCircle, CheckCircle2, Info, Package } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -47,10 +47,10 @@ export default function DriverCollectionDetail() {
     }
   }, [dbItems]);
 
-  const updateQty = (id: string, val: string) => {
+  const updateQty = (itemId: string, val: string) => {
     const num = parseInt(val) || 0;
     setItems(prev => prev.map(item => 
-      item.id === id ? { ...item, driverQty: num } : item
+      item.id === itemId ? { ...item, driverQty: num } : item
     ));
   };
 
@@ -78,73 +78,78 @@ export default function DriverCollectionDetail() {
 
     toast({
       title: "수거 완료",
-      description: `${request?.hospitalName} 수거 정보가 Firestore에 저장되었습니다.`,
+      description: `${request?.hospitalName} 수거 정보가 저장되었습니다.`,
     });
     router.push('/driver');
   };
 
   if (isReqLoading || isItemsLoading) return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-900 gap-4">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-secondary"></div>
-      <p className="text-gray-400">현장 정보를 불러오는 중입니다...</p>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-slate-900 gap-6">
+      <div className="animate-spin rounded-full h-12 w-12 border-4 border-secondary border-t-transparent shadow-xl"></div>
+      <p className="text-slate-200 font-black text-lg">데이터 동기화 중...</p>
     </div>
   );
 
-  if (!request) return <div className="p-8 text-center text-white bg-gray-900 min-h-screen">요청을 찾을 수 없습니다.</div>;
+  if (!request) return <div className="p-8 text-center text-white bg-slate-900 min-h-screen font-bold">데이터를 찾을 수 없습니다.</div>;
 
   return (
-    <div className="bg-gray-900 min-h-screen pb-32 text-white">
-      <div className="sticky top-0 z-20 bg-gray-900 border-b border-white/10 p-4 flex items-center justify-between">
-        <Link href="/driver" className="p-1">
-          <ChevronLeft className="h-6 w-6" />
+    <div className="bg-slate-900 min-h-screen pb-32 text-slate-50">
+      <div className="sticky top-0 z-20 bg-slate-900/90 backdrop-blur-md border-b border-white/10 p-4 flex items-center justify-between shadow-lg">
+        <Link href="/driver" className="p-2 hover:bg-white/5 rounded-full transition-colors">
+          <ChevronLeft className="h-7 w-7" />
         </Link>
-        <h1 className="text-lg font-bold">수거 현장 확인</h1>
-        <div className="w-8"></div>
+        <h1 className="text-lg font-black tracking-tight text-white">현장 수거 확인</h1>
+        <div className="w-10"></div>
       </div>
 
       <div className="p-4 space-y-6">
-        <section className="bg-gray-800 rounded-2xl p-4 border border-white/5 space-y-2">
-          <div className="flex justify-between items-start">
-            <h2 className="text-xl font-bold">{request.hospitalName}</h2>
-            <Badge variant="outline" className="border-secondary text-secondary">수거단계</Badge>
+        <section className="bg-slate-800 rounded-3xl p-6 border border-white/10 shadow-2xl space-y-3 relative overflow-hidden">
+          <div className="absolute top-0 right-0 p-8 opacity-5">
+            <Package className="h-24 w-24 text-white" />
           </div>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <Info className="h-3 w-3" />
-            <span>병원 측에서 입력한 수량을 현장에서 다시 확인해주세요.</span>
+          <div className="flex justify-between items-start relative z-10">
+            <div className="space-y-1">
+              <h2 className="text-2xl font-black text-white">{request.hospitalName}</h2>
+              <div className="flex items-center gap-2 text-sm text-slate-300 font-bold">
+                <Info className="h-4 w-4 text-secondary" />
+                <span>요청 수량과 실제 수거량을 대조하세요.</span>
+              </div>
+            </div>
           </div>
         </section>
 
         <section className="space-y-4">
-          <h3 className="text-xs font-bold text-gray-500 uppercase px-1">품목별 수량 대조</h3>
+          <h3 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em] px-2">품목별 수량 입력</h3>
           {items.map((item) => {
             const diff = (item.driverQty || 0) - item.requestedQuantity;
             return (
-              <Card key={item.id} className={`bg-gray-800 border-none rounded-2xl overflow-hidden transition-all ${diff !== 0 ? 'ring-2 ring-orange-500' : ''}`}>
-                <CardContent className="p-4 space-y-4">
+              <Card key={item.id} className={`bg-slate-800 border-none rounded-3xl overflow-hidden transition-all ring-1 ring-white/10 ${diff !== 0 ? 'ring-2 ring-orange-500 shadow-orange-500/10' : ''}`}>
+                <CardContent className="p-6 space-y-4">
                   <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-bold text-lg">{item.itemName || '품목명 없음'}</p>
-                      <p className="text-xs text-gray-400">병원 입력: {item.requestedQuantity}</p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="text-right">
-                        <Label className="text-[10px] text-gray-500 uppercase block mb-1">실제 수량</Label>
-                        <Input 
-                          type="number" 
-                          value={item.driverQty}
-                          onChange={(e) => updateQty(item.id, e.target.value)}
-                          className="w-20 bg-gray-900 border-none text-right font-bold text-lg focus:ring-secondary text-white" 
-                        />
+                    <div className="space-y-1">
+                      <p className="font-black text-xl text-white">{item.itemName || '품목명'}</p>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="secondary" className="bg-slate-900 text-slate-300 border-none font-bold">병원 요청: {item.requestedQuantity}</Badge>
                       </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Label className="text-[10px] text-slate-400 font-black uppercase tracking-widest">실제 수거</Label>
+                      <Input 
+                        type="number" 
+                        inputMode="numeric"
+                        value={item.driverQty}
+                        onChange={(e) => updateQty(item.id, e.target.value)}
+                        className="w-24 bg-slate-900 border-white/10 text-right font-black text-2xl h-14 rounded-2xl focus:ring-secondary text-white" 
+                      />
                     </div>
                   </div>
                   {diff !== 0 && (
-                    <div className="flex items-center justify-between bg-orange-500/10 p-2 rounded-xl">
-                      <div className="flex items-center gap-2 text-orange-500 text-sm font-bold">
-                        <AlertCircle className="h-4 w-4" />
-                        차이 발생
+                    <div className="flex items-center justify-between bg-orange-500/10 p-3 rounded-2xl border border-orange-500/20">
+                      <div className="flex items-center gap-2 text-orange-400 text-sm font-black">
+                        <AlertCircle className="h-5 w-5" />
+                        수량 차이 발생
                       </div>
-                      <div className="text-orange-500 font-bold">
+                      <div className="text-orange-400 font-black text-lg">
                         {diff > 0 ? `+${diff}` : diff} 개
                       </div>
                     </div>
@@ -156,28 +161,28 @@ export default function DriverCollectionDetail() {
         </section>
 
         {hasDiscrepancy && (
-          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-300">
-            <h3 className="text-xs font-bold text-orange-500 uppercase px-1">차이 사유 및 증빙 (필수)</h3>
-            <Card className="bg-gray-800 border-orange-500/50 rounded-2xl">
-              <CardContent className="p-4 space-y-4">
-                <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-400">차이 발생 사유</Label>
+          <section className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h3 className="text-[11px] font-black text-orange-500 uppercase tracking-[0.2em] px-2">차이 발생 사유 입력 (필수)</h3>
+            <Card className="bg-slate-800 border-orange-500/30 rounded-3xl ring-2 ring-orange-500/20">
+              <CardContent className="p-6 space-y-6">
+                <div className="space-y-2">
+                  <Label className="text-xs text-slate-300 font-bold">구체적인 사유</Label>
                   <Select value={reason} onValueChange={setReason}>
-                    <SelectTrigger className="bg-gray-900 border-none h-12 text-white">
-                      <SelectValue placeholder="사유를 선택해주세요" />
+                    <SelectTrigger className="bg-slate-900 border-white/10 h-14 rounded-2xl text-white font-bold">
+                      <SelectValue placeholder="사유를 선택해 주세요" />
                     </SelectTrigger>
-                    <SelectContent className="bg-gray-800 text-white border-gray-700">
+                    <SelectContent className="bg-slate-800 text-white border-white/10">
                       <SelectItem value="loss">세탁물 분실 의심</SelectItem>
                       <SelectItem value="error">병원 측 입력 오류</SelectItem>
                       <SelectItem value="damage">오염/파손으로 인한 제외</SelectItem>
-                      <SelectItem value="other">기타</SelectItem>
+                      <SelectItem value="other">기타 (직접 입력)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="aspect-square bg-gray-900 rounded-xl flex flex-col items-center justify-center border-2 border-dashed border-gray-700 text-gray-500">
-                    <Camera className="h-6 w-6" />
-                    <span className="text-[10px] mt-1 font-bold">사진 첨부</span>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="aspect-square bg-slate-900 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-white/10 text-slate-400 hover:text-white hover:border-white/30 transition-all cursor-pointer">
+                    <Camera className="h-8 w-8" />
+                    <span className="text-[10px] mt-2 font-black uppercase">사진 첨부</span>
                   </div>
                 </div>
               </CardContent>
@@ -185,25 +190,25 @@ export default function DriverCollectionDetail() {
           </section>
         )}
 
-        <section className="bg-gray-800 rounded-2xl p-4 space-y-4">
-          <div className="flex items-center gap-2">
-            <CheckCircle2 className="h-5 w-5 text-secondary" />
-            <p className="text-sm font-bold">병원 담당자 확인</p>
+        <section className="bg-slate-800/50 rounded-3xl p-6 space-y-4 border border-white/5">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-6 w-6 text-secondary" />
+            <p className="text-base font-black text-white">담당자 현장 확인</p>
           </div>
-          <p className="text-xs text-gray-400">현장에서 병원 담당자에게 실제 수량을 확인받았음을 서약합니다.</p>
-          <Button variant="outline" className="w-full border-gray-700 bg-transparent text-gray-300">
+          <p className="text-sm text-slate-300 leading-relaxed font-medium">실제 수거 수량을 병원 담당자에게 공유하고 최종 확인을 받았음을 서약합니다.</p>
+          <Button variant="outline" className="w-full h-12 border-white/10 bg-transparent text-slate-200 rounded-2xl font-bold hover:bg-white/5">
             담당자 서명 / 확인 (선택)
           </Button>
         </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-gray-900/80 backdrop-blur-md border-t border-white/10 flex gap-3 z-30 max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 flex gap-3 z-30 max-w-lg mx-auto">
         <Button 
-          className="w-full h-14 rounded-2xl font-bold gap-2 bg-secondary text-secondary-foreground shadow-lg shadow-secondary/20"
+          className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-secondary-foreground shadow-2xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
           onClick={handleComplete}
           disabled={hasDiscrepancy && (!reason)}
         >
-          수거 완료 처리
+          수거 완료 및 저장
         </Button>
       </div>
     </div>
