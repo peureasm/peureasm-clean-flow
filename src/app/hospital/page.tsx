@@ -9,11 +9,16 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 
+/**
+ * @fileoverview 병원 담당자 메인 대시보드
+ * 실시간으로 Firestore에서 자신의 병원 세탁 요청 현황을 조회합니다.
+ */
+
 export default function HospitalDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
-  // 사용자의 실시간 프로필 정보를 가져옵니다.
+  // 1. 사용자 프로필 로드
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -21,138 +26,179 @@ export default function HospitalDashboard() {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 복합 인덱스 오류를 피하기 위해 orderBy를 제거하고 단순 필터만 적용합니다.
+  // 2. 소속 병원의 수거 요청 목록 조회 (실시간)
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user || !userData?.hospitalId) return null;
+    if (!firestore || !userData?.hospitalId) return null;
     
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', '==', userData.hospitalId),
-      limit(10) // 넉넉하게 가져온 뒤 클라이언트에서 정렬하거나 그대로 보여줍니다.
+      limit(5)
     );
-  }, [firestore, user, userData?.hospitalId]);
+  }, [firestore, userData?.hospitalId]);
 
   const { data: myRequests, isLoading: isRequestsLoading, error: requestsError } = useCollection(requestsQuery);
 
+  // 3. 통계 계산
   const stats = {
     totalThisMonth: myRequests?.length || 0,
-    pending: myRequests?.filter(r => r.currentStatus === '제출').length || 0
+    pending: myRequests?.filter(r => ['제출', '수거완료'].includes(r.currentStatus)).length || 0
   };
 
   if (isUserLoading || isUserDocLoading) {
     return (
       <div className="p-8 text-center flex flex-col items-center gap-4">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-muted-foreground">인증 및 프로필 확인 중...</p>
+        <p className="text-muted-foreground">인증 정보를 확인 중입니다...</p>
       </div>
     );
   }
 
   if (requestsError) {
     return (
-      <div className="p-8 text-center flex flex-col items-center gap-4 text-destructive">
+      <div className="p-8 text-center flex flex-col items-center gap-4 text-destructive bg-destructive/5 rounded-3xl m-4">
         <AlertCircle className="h-12 w-12" />
-        <p className="font-bold">데이터를 불러오지 못했습니다.</p>
-        <p className="text-xs">{requestsError.message}</p>
-        <Button onClick={() => window.location.reload()} variant="outline" size="sm">다시 시도</Button>
-      </div>
-    );
-  }
-
-  // 프로필이 없는 경우
-  if (!userData?.hospitalId) {
-    return (
-      <div className="p-8 text-center flex flex-col items-center gap-4">
-        <Package className="h-12 w-12 text-slate-200 animate-pulse" />
-        <p className="text-muted-foreground">병원 정보를 설정하고 있습니다. (하단 역할 전환을 다시 클릭해보세요)</p>
+        <p className="font-bold">데이터를 불러오는 중 문제가 발생했습니다.</p>
+        <p className="text-xs opacity-70">Firestore 권한 또는 네트워크를 확인해 주세요.</p>
+        <Button onClick={() => window.location.reload()} variant="outline" size="sm">새로고침</Button>
       </div>
     );
   }
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-lg mx-auto sm:max-w-7xl">
+    <div className="p-4 sm:p-8 space-y-8 max-w-lg mx-auto sm:max-w-7xl animate-in fade-in duration-500">
       <section className="space-y-2">
-        <h1 className="text-2xl font-bold tracking-tight">반갑습니다, {userData?.name || '담당자'}님</h1>
-        <p className="text-muted-foreground">현재 소속: <strong>{userData?.hospitalId === 'h1' ? '서울메디컬병원' : userData?.hospitalId}</strong></p>
+        <div className="flex items-center gap-3">
+          <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center text-white text-xl font-black">
+            {userData?.name?.[0] || '김'}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight">반갑습니다, {userData?.name || '담당자'}님</h1>
+            <p className="text-sm text-muted-foreground font-medium">소속: <span className="text-primary">{userData?.hospitalId === 'h1' ? '서울메디컬병원' : userData?.hospitalId}</span></p>
+          </div>
+        </div>
       </section>
 
       <div className="grid grid-cols-2 gap-4">
-        <Card className="border-none shadow-sm bg-primary/5">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-1">
-            <Package className="h-8 w-8 text-primary" />
-            <p className="text-2xl font-bold">{stats.totalThisMonth}건</p>
-            <p className="text-xs text-muted-foreground">조회된 요청 수</p>
+        <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden">
+          <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
+            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+              <Package className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-black text-slate-900">{stats.totalThisMonth}건</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">전체 요청</p>
+            </div>
           </CardContent>
         </Card>
-        <Card className="border-none shadow-sm bg-secondary/5">
-          <CardContent className="p-4 flex flex-col items-center justify-center text-center space-y-1">
-            <Clock className="h-8 w-8 text-secondary" />
-            <p className="text-2xl font-bold">{stats.pending}건</p>
-            <p className="text-xs text-muted-foreground">수거 대기</p>
+        <Card className="border-none shadow-sm bg-white rounded-3xl overflow-hidden">
+          <CardContent className="p-6 flex flex-col items-center justify-center text-center space-y-2">
+            <div className="p-3 bg-orange-50 rounded-2xl text-orange-600">
+              <Clock className="h-6 w-6" />
+            </div>
+            <div>
+              <p className="text-2xl font-black text-slate-900">{stats.pending}건</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">수거/처리 중</p>
+            </div>
           </CardContent>
         </Card>
       </div>
 
       <Link href="/hospital/new">
-        <Button className="w-full h-14 rounded-2xl text-lg font-bold flex gap-2 shadow-lg shadow-primary/20">
+        <Button className="w-full h-16 rounded-2xl text-lg font-bold flex gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
           <Plus className="h-6 w-6" />
           신규 수거 요청 등록
         </Button>
       </Link>
 
       <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-bold">최근 요청 내역</h2>
-          <Link href="/hospital/requests" className="text-sm text-primary font-medium flex items-center">
-            전체보기 <ChevronRight className="h-4 w-4" />
+        <div className="flex items-center justify-between px-1">
+          <h2 className="text-lg font-bold text-slate-800">최근 진행 내역</h2>
+          <Link href="/hospital/requests" className="text-xs text-primary font-bold flex items-center bg-primary/5 px-3 py-1.5 rounded-full">
+            더보기 <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
 
         {isRequestsLoading ? (
-          <div className="py-10 text-center text-muted-foreground">데이터 로딩 중...</div>
+          <div className="py-20 flex flex-col items-center gap-3">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-300"></div>
+            <p className="text-xs text-muted-foreground">내역을 가져오고 있습니다...</p>
+          </div>
         ) : myRequests && myRequests.length > 0 ? (
-          myRequests.map((req) => (
-            <Card key={req.id} className="rounded-2xl overflow-hidden border-none shadow-sm hover:shadow-md transition-shadow">
-              <CardContent className="p-0">
-                <Link href={`/hospital/requests/${req.id}`} className="block p-4">
-                  <div className="flex justify-between items-start mb-2">
-                    <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground font-medium">{req.id}</p>
-                      <p className="font-bold">{req.requestDate} 수거 건</p>
+          <div className="space-y-3">
+            {myRequests.map((req) => (
+              <Card key={req.id} className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all group overflow-hidden">
+                <CardContent className="p-0">
+                  <Link href={`/hospital/requests/${req.id}`} className="block p-5">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 uppercase">
+                            {req.id.slice(-6)}
+                          </span>
+                        </div>
+                        <p className="font-bold text-slate-900">{req.requestDate} 수거</p>
+                      </div>
+                      <StatusBadge status={req.currentStatus as any} />
                     </div>
-                    <StatusBadge status={req.currentStatus as any} />
-                  </div>
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Package className="h-3 w-3" />
-                      <span>{req.specialNotes ? '특이사항 있음' : '일반 수거'}</span>
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                        <Clock className="h-3.5 w-3.5" />
+                        <span>{req.desiredPickupTime}</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                        <Package className="h-3.5 w-3.5" />
+                        <span>{req.specialNotes ? '특이사항 포함' : '일반 품목'}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{req.desiredPickupTime}</span>
-                    </div>
-                  </div>
-                </Link>
-              </CardContent>
-            </Card>
-          ))
+                  </Link>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         ) : (
-          <div className="py-10 text-center text-muted-foreground">등록된 요청이 없습니다.</div>
+          <div className="py-20 text-center space-y-4 bg-white rounded-3xl border-2 border-dashed border-slate-100">
+            <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
+              <Package className="h-8 w-8 text-slate-200" />
+            </div>
+            <div>
+              <p className="text-slate-400 font-bold">진행 중인 수거 내역이 없습니다.</p>
+              <p className="text-[11px] text-slate-300">첫 번째 수거 요청을 등록해 보세요!</p>
+            </div>
+          </div>
         )}
       </section>
 
-      <Card className="bg-slate-900 text-white rounded-2xl border-none">
-        <CardContent className="p-6 space-y-4">
-          <div className="flex justify-between items-center">
-            <h3 className="font-bold text-lg">실시간 상태 정보</h3>
+      <Card className="bg-slate-900 text-white rounded-3xl border-none shadow-2xl overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8 opacity-10">
+          <ShieldCheck className="h-24 w-24" />
+        </div>
+        <CardContent className="p-6 space-y-4 relative z-10">
+          <div className="flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+            <h3 className="font-bold text-sm text-slate-300 uppercase tracking-widest">System Profile</h3>
           </div>
-          <p className="text-sm text-slate-300">
-            인증 UID: <strong>{user?.uid.slice(0, 8)}...</strong><br />
-            역할: <strong>{userData?.role}</strong><br />
-            소속 ID: <strong>{userData?.hospitalId}</strong>
-          </p>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase">사용자 역할</p>
+              <p className="text-sm font-bold">{userData?.role || 'HOSPITAL'}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[10px] text-slate-500 font-bold uppercase">인증 고유번호</p>
+              <p className="text-sm font-mono text-emerald-400">{user?.uid.slice(0, 8)}</p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+function ShieldCheck({ className }: { className?: string }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+      <path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/>
+      <path d="m9 12 2 2 4-4"/>
+    </svg>
   );
 }
