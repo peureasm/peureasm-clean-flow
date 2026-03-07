@@ -25,6 +25,7 @@ export default function AdminHospitalsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [phoneValue, setPhoneValue] = useState("");
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -40,9 +41,32 @@ export default function AdminHospitalsPage() {
     h.address?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    let formattedValue = value;
+    
+    if (value.length > 3 && value.length <= 7) {
+      formattedValue = `${value.slice(0, 3)}-${value.slice(3)}`;
+    } else if (value.length > 7) {
+      formattedValue = `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7, 11)}`;
+    }
+    
+    setPhoneValue(formattedValue);
+  };
+
   const handleAddHospital = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!firestore) return;
+
+    // 간단한 연락처 유효성 검사 (최소 12자: 010-000-0000 이상)
+    if (phoneValue.length < 12) {
+      toast({
+        variant: "destructive",
+        title: "입력 오류",
+        description: "올바른 연락처 형식을 입력해주세요. (예: 010-1234-5678)",
+      });
+      return;
+    }
 
     setIsSubmitting(true);
     const formData = new FormData(e.currentTarget);
@@ -51,7 +75,7 @@ export default function AdminHospitalsPage() {
       name: formData.get('name') as string,
       address: formData.get('address') as string,
       contactPersonName: formData.get('contactPersonName') as string,
-      contactPersonPhone: formData.get('contactPersonPhone') as string,
+      contactPersonPhone: phoneValue,
       registrationDate: new Date().toISOString(),
       status: 'Active'
     };
@@ -64,6 +88,7 @@ export default function AdminHospitalsPage() {
           description: `${newHospital.name}이(가) 시스템에 등록되었습니다.`,
         });
         setIsDialogOpen(false);
+        setPhoneValue(""); // 입력값 초기화
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -78,7 +103,10 @@ export default function AdminHospitalsPage() {
           <p className="text-muted-foreground font-medium text-sm">시스템을 이용 중인 병원 고객사를 조회하고 등록합니다.</p>
         </div>
         
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={(open) => {
+          setIsDialogOpen(open);
+          if (!open) setPhoneValue(""); // 닫힐 때 초기화
+        }}>
           <DialogTrigger asChild>
             <Button className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20">
               <Plus className="h-5 w-5" /> 신규 병원 등록
@@ -108,7 +136,16 @@ export default function AdminHospitalsPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="contactPersonPhone" className="text-xs font-bold uppercase text-slate-400">연락처</Label>
-                    <Input id="contactPersonPhone" name="contactPersonPhone" placeholder="010-0000-0000" className="rounded-xl border-slate-200" required />
+                    <Input 
+                      id="contactPersonPhone" 
+                      name="contactPersonPhone" 
+                      placeholder="010-0000-0000" 
+                      className="rounded-xl border-slate-200" 
+                      value={phoneValue}
+                      onChange={handlePhoneChange}
+                      maxLength={13}
+                      required 
+                    />
                   </div>
                 </div>
               </div>
@@ -166,6 +203,10 @@ export default function AdminHospitalsPage() {
                   <div className="flex items-center gap-2.5 text-sm text-slate-500">
                     <MapPin className="h-4 w-4 text-slate-300" />
                     <span className="font-medium line-clamp-1">{hosp.address}</span>
+                  </div>
+                  <div className="flex items-center gap-2.5 text-sm text-slate-500">
+                    <Phone className="h-4 w-4 text-slate-300" />
+                    <span className="font-medium">{hosp.contactPersonPhone || '정보 없음'}</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-sm text-slate-500">
                     <User className="h-4 w-4 text-slate-300" />
