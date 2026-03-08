@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2, BarChart3 } from 'lucide-react';
+import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2, BarChart3, Truck } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { 
   Dialog, 
@@ -58,7 +58,6 @@ export default function AdminHospitalsPage() {
     e.preventDefault();
     if (!firestore) return;
 
-    // 간단한 연락처 유효성 검사 (최소 12자: 010-000-0000 이상)
     if (phoneValue.length < 12) {
       toast({
         variant: "destructive",
@@ -77,7 +76,9 @@ export default function AdminHospitalsPage() {
       contactPersonName: formData.get('contactPersonName') as string,
       contactPersonPhone: phoneValue,
       registrationDate: new Date().toISOString(),
-      status: 'Active'
+      status: 'Active',
+      assignedDriverId: null,
+      assignedDriverName: null
     };
 
     const hospitalsRef = collection(firestore, 'hospitals');
@@ -88,7 +89,7 @@ export default function AdminHospitalsPage() {
           description: `${newHospital.name}이(가) 시스템에 등록되었습니다.`,
         });
         setIsDialogOpen(false);
-        setPhoneValue(""); // 입력값 초기화
+        setPhoneValue("");
       })
       .finally(() => {
         setIsSubmitting(false);
@@ -105,7 +106,7 @@ export default function AdminHospitalsPage() {
         
         <Dialog open={isDialogOpen} onOpenChange={(open) => {
           setIsDialogOpen(open);
-          if (!open) setPhoneValue(""); // 닫힐 때 초기화
+          if (!open) setPhoneValue("");
         }}>
           <DialogTrigger asChild>
             <Button className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20">
@@ -189,14 +190,14 @@ export default function AdminHospitalsPage() {
                     <HospitalIcon className="h-6 w-6" />
                   </div>
                   <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                    hosp.status === 'Active' 
-                      ? 'bg-emerald-50 text-emerald-600 border-emerald-100' 
+                    hosp.assignedDriverId 
+                      ? 'bg-primary text-white border-transparent' 
                       : 'bg-slate-50 text-slate-400 border-slate-100'
                   }`}>
-                    {hosp.status?.toUpperCase() || 'ACTIVE'}
+                    {hosp.assignedDriverName ? `담당: ${hosp.assignedDriverName}` : '기사 미배정'}
                   </span>
                 </div>
-                <CardTitle className="text-xl font-black mt-4 text-slate-900">{hosp.name}</CardTitle>
+                <CardTitle className="text-xl font-black mt-4 text-slate-900 line-clamp-1">{hosp.name}</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4 pt-2">
                 <div className="space-y-2.5">
@@ -205,22 +206,13 @@ export default function AdminHospitalsPage() {
                     <span className="font-medium line-clamp-1">{hosp.address}</span>
                   </div>
                   <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                    <Phone className="h-4 w-4 text-slate-300" />
-                    <span className="font-medium">{hosp.contactPersonPhone || '정보 없음'}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                    <User className="h-4 w-4 text-slate-300" />
-                    <span className="font-medium">{hosp.contactPersonName || '담당자 미정'}</span>
+                    <Truck className="h-4 w-4 text-slate-300" />
+                    <span className="font-bold text-primary">{hosp.assignedDriverName || '전담 기사 없음'}</span>
                   </div>
                 </div>
                 <div className="pt-4 flex gap-2">
                   <Button variant="outline" className="flex-1 rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50" asChild>
-                    <Link href={`/admin/hospitals/${hosp.id}`}>상세</Link>
-                  </Button>
-                  <Button variant="ghost" className="flex-1 rounded-xl h-10 text-primary font-bold hover:bg-primary/5" asChild>
-                    <Link href="/admin/stats">
-                      <BarChart3 className="h-4 w-4 mr-2" /> 통계
-                    </Link>
+                    <Link href={`/admin/hospitals/${hosp.id}`}>상세 및 배정</Link>
                   </Button>
                 </div>
               </CardContent>

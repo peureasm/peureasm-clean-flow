@@ -2,7 +2,7 @@
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from '@/components/shared/StatusBadge';
 import { 
   ChevronLeft, Hospital, MapPin, Phone, User as UserIcon, 
-  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Mail
+  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Mail, Truck, Check
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -55,9 +55,19 @@ export default function HospitalDetailPage() {
     );
   }, [firestore, id]);
 
+  // 전체 기사 목록 조회 (배정용)
+  const driversQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(
+      collection(firestore, 'users'),
+      where('role', '==', 'DRIVER')
+    );
+  }, [firestore]);
+
   const { data: hospital, isLoading: isHospLoading } = useDoc(hospitalRef);
   const { data: requests, isLoading: isReqLoading } = useCollection(requestsQuery);
   const { data: staff, isLoading: isStaffLoading } = useCollection(staffQuery);
+  const { data: drivers, isLoading: isDriversLoading } = useCollection(driversQuery);
 
   const handleAddStaff = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -73,7 +83,6 @@ export default function HospitalDetailPage() {
       createdAt: new Date().toISOString()
     };
 
-    // 실제 운영 환경에서는 Auth와 연동되지만, 프로토타입에서는 users 컬렉션에 직접 추가
     const usersRef = collection(firestore, 'users');
     addDocumentNonBlocking(usersRef, staffData);
 
@@ -82,6 +91,21 @@ export default function HospitalDetailPage() {
       description: `${staffData.name} 담당자가 이 병원에 배정되었습니다.`,
     });
     setIsAddStaffOpen(false);
+  };
+
+  const handleAssignDriver = (driver: any) => {
+    if (!firestore || !id || !hospitalRef) return;
+
+    updateDocumentNonBlocking(hospitalRef, {
+      assignedDriverId: driver.id,
+      assignedDriverName: driver.name,
+      updatedAt: new Date().toISOString()
+    });
+
+    toast({
+      title: "기사 배정 완료",
+      description: `${driver.name} 기사님이 이 병원의 전담 기사로 배정되었습니다.`,
+    });
   };
 
   if (isHospLoading) return <div className="p-12 text-center text-slate-400 font-bold">병원 정보를 불러오는 중...</div>;
@@ -134,7 +158,6 @@ export default function HospitalDetailPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* 병원 기본 정보 카드 */}
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden h-fit">
           <CardHeader className="bg-primary/5 pb-6">
             <div className="flex items-center gap-3">
@@ -154,17 +177,17 @@ export default function HospitalDetailPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
+                <Truck className="h-5 w-5 text-slate-400 mt-0.5" />
+                <div>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">배정 기사</p>
+                  <p className="text-sm font-bold text-primary">{hospital.assignedDriverName || '미배정'}</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
                 <UserIcon className="h-5 w-5 text-slate-400 mt-0.5" />
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">대표 담당자</p>
                   <p className="text-sm font-medium">{hospital.contactPersonName || '정보 없음'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Phone className="h-5 w-5 text-slate-400 mt-0.5" />
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">연락처</p>
-                  <p className="text-sm font-medium">{hospital.contactPersonPhone || '정보 없음'}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -178,7 +201,6 @@ export default function HospitalDetailPage() {
           </CardContent>
         </Card>
 
-        {/* 탭 기반 상세 정보 */}
         <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <Tabs defaultValue="requests" className="w-full">
             <div className="px-6 pt-4 border-b">
@@ -194,6 +216,12 @@ export default function HospitalDetailPage() {
                   className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-slate-500 data-[state=active]:text-primary"
                 >
                   <ShieldCheck className="h-4 w-4 mr-2" /> 담당자 관리
+                </TabsTrigger>
+                <TabsTrigger 
+                  value="drivers" 
+                  className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:shadow-none font-bold text-slate-500 data-[state=active]:text-primary"
+                >
+                  <Truck className="h-4 w-4 mr-2" /> 기사 배정
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -243,27 +271,17 @@ export default function HospitalDetailPage() {
                       <TableRow>
                         <TableHead className="font-bold text-xs uppercase">이름</TableHead>
                         <TableHead className="font-bold text-xs uppercase">아이디</TableHead>
-                        <TableHead className="font-bold text-xs uppercase">상태</TableHead>
-                        <TableHead className="text-right font-bold text-xs uppercase">권한</TableHead>
+                        <TableHead className="text-right font-bold text-xs uppercase">상태</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {staff.map((member) => (
-                        <TableRow key={member.id} className="hover:bg-slate-50/30 transition-colors">
+                        <TableRow key={member.id}>
                           <TableCell className="font-bold">{member.name}</TableCell>
-                          <TableCell className="text-slate-500 text-xs">
-                            <div className="flex items-center gap-1">
-                              <Mail className="h-3 w-3" /> {member.username}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100">
-                              ACTIVE
-                            </span>
-                          </TableCell>
+                          <TableCell className="text-slate-500 text-xs">{member.username}</TableCell>
                           <TableCell className="text-right">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100 px-2 py-1 rounded-lg">
-                              HOSPITAL
+                            <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-600 border border-emerald-100 uppercase">
+                              Active
                             </span>
                           </TableCell>
                         </TableRow>
@@ -272,6 +290,54 @@ export default function HospitalDetailPage() {
                   </Table>
                 ) : (
                   <div className="p-20 text-center text-slate-300 italic">등록된 담당자가 없습니다.</div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="drivers" className="m-0">
+              <div className="p-0">
+                <div className="p-6 bg-slate-50/50 border-b">
+                  <h3 className="text-sm font-bold text-slate-700">전담 기사 선택</h3>
+                  <p className="text-xs text-muted-foreground">이 병원의 세탁물 수거 및 납품을 담당할 기사를 배정하세요.</p>
+                </div>
+                {isDriversLoading ? (
+                  <div className="p-12 text-center text-slate-300 italic">기사 목록 로딩 중...</div>
+                ) : drivers && drivers.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="font-bold">기사명</TableHead>
+                        <TableHead className="font-bold">계정</TableHead>
+                        <TableHead className="text-right font-bold">배정 상태</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {drivers.map((driver) => (
+                        <TableRow key={driver.id} className="group">
+                          <TableCell className="font-bold">{driver.name}</TableCell>
+                          <TableCell className="text-xs text-slate-500">{driver.username}</TableCell>
+                          <TableCell className="text-right">
+                            {hospital.assignedDriverId === driver.id ? (
+                              <Badge className="bg-primary text-white gap-1 px-3 py-1">
+                                <Check className="h-3 w-3" /> 배정됨
+                              </Badge>
+                            ) : (
+                              <Button 
+                                variant="outline" 
+                                size="sm" 
+                                className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity"
+                                onClick={() => handleAssignDriver(driver)}
+                              >
+                                배정하기
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="p-20 text-center text-slate-300 italic">시스템에 등록된 기사가 없습니다.</div>
                 )}
               </div>
             </TabsContent>

@@ -11,7 +11,9 @@
         "address": { "type": "string" },
         "contactPersonName": { "type": "string" },
         "contactPersonPhone": { "type": "string" },
-        "registrationDate": { "type": "string", "format": "date-time" }
+        "registrationDate": { "type": "string", "format": "date-time" },
+        "assignedDriverId": { "type": "string", "description": "배정된 기사 UID" },
+        "assignedDriverName": { "type": "string", "description": "배정된 기사 성함" }
       },
       "required": ["id", "name", "address"]
     },
@@ -40,13 +42,9 @@
         "hospitalName": { "type": "string" },
         "requestorId": { "type": "string" },
         "requestDate": { "type": "string", "format": "date" },
-        "desiredPickupTime": { "type": "string" },
         "currentStatus": { "type": "string", "enum": ["제출", "수거완료", "공장입고", "세탁중", "건조중", "포장완료", "출고", "납품완료", "병원확인완료", "종결"] },
         "specialNotes": { "type": "string" },
         "isContaminated": { "type": "boolean" },
-        "isLeaking": { "type": "boolean" },
-        "isDoublePacked": { "type": "boolean" },
-        "hasLabels": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "hospitalId", "currentStatus", "createdAt"]
@@ -87,10 +85,6 @@
       {
         "path": "/collectionRequests/{collectionRequestId}/items/{itemId}",
         "definition": { "entityName": "CollectionRequestItem", "schema": { "$ref": "#/backend/entities/CollectionRequestItem" }, "description": "수거 요청 상세 품목" }
-      },
-      {
-        "path": "/settlements/{settlementId}",
-        "definition": { "entityName": "Settlement", "description": "월별 정산 내역" }
       }
     ]
   }
