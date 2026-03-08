@@ -14,7 +14,7 @@ import {
   ArrowRight, Share2, Copy, ShieldCheck, User, Package
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, 
   DialogHeader, DialogTitle, DialogTrigger 
@@ -50,7 +50,11 @@ export default function DriverDetailPage() {
   const { data: assignedHospitals, isLoading: isHospLoading } = useCollection(hospitalsQuery);
 
   // 기사의 담당 병원들의 최근 요청 조회
-  const assignedHospitalIds = assignedHospitals?.map(h => h.id) || [];
+  // assignedHospitalIds를 useMemo로 감싸서 참조 안정성을 확보합니다 (무한 루프 방지)
+  const assignedHospitalIds = useMemo(() => {
+    return assignedHospitals?.map(h => h.id) || [];
+  }, [assignedHospitals]);
+
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || assignedHospitalIds.length === 0) return null;
     // Firestore 'in' query supports up to 10 items
