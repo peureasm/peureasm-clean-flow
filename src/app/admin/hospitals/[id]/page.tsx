@@ -6,6 +6,7 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase, addDocumentNonBlo
 import { doc, collection, query, where, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from '@/components/shared/StatusBadge';
