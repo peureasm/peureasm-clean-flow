@@ -37,20 +37,35 @@ export default function RoleSelector() {
   // 초대 링크 감지 및 자동 설정
   useEffect(() => {
     const inviteId = searchParams.get('inviteId');
-    if (inviteId && user && firestore) {
-      const userRef = doc(firestore, 'users', user.uid);
-      
-      updateDoc(userRef, {
-        role: 'HOSPITAL',
-        hospitalId: inviteId,
-        updatedAt: serverTimestamp(),
-      }).then(() => {
-        toast({
-          title: "초대 링크 확인됨",
-          description: "해당 병원의 담당자로 연결되었습니다.",
+    const driverInvite = searchParams.get('driverInvite');
+
+    if (user && firestore) {
+      if (inviteId) {
+        const userRef = doc(firestore, 'users', user.uid);
+        updateDoc(userRef, {
+          role: 'HOSPITAL',
+          hospitalId: inviteId,
+          updatedAt: serverTimestamp(),
+        }).then(() => {
+          toast({
+            title: "초대 링크 확인됨",
+            description: "해당 병원의 담당자로 연결되었습니다.",
+          });
+          router.replace('/hospital');
         });
-        router.replace('/hospital');
-      });
+      } else if (driverInvite === 'true') {
+        const userRef = doc(firestore, 'users', user.uid);
+        updateDoc(userRef, {
+          role: 'DRIVER',
+          updatedAt: serverTimestamp(),
+        }).then(() => {
+          toast({
+            title: "기사 초대 링크 확인됨",
+            description: "시스템의 수거 기사로 등록되었습니다.",
+          });
+          router.replace('/driver');
+        });
+      }
     }
   }, [searchParams, user, firestore, router, toast]);
 
@@ -68,8 +83,10 @@ export default function RoleSelector() {
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         
-        // 프로필이 없거나 역할이 다른 경우 업데이트
-        if (!userSnap.exists() || userSnap.data().role !== currentPathRole) {
+        // 프로필이 없거나 역할이 다른 경우 업데이트 (초대 링크 파라미터가 없을 때만 자동 전환 방지)
+        const hasInviteParam = searchParams.has('inviteId') || searchParams.has('driverInvite');
+        
+        if (!userSnap.exists() || (!hasInviteParam && userSnap.data().role !== currentPathRole)) {
           setDocumentNonBlocking(userRef, {
             id: user.uid,
             username: user.email || `user_${user.uid.slice(0, 5)}`,
@@ -83,7 +100,7 @@ export default function RoleSelector() {
       }
     };
     syncUserProfile();
-  }, [user, firestore, currentPathRole]);
+  }, [user, firestore, currentPathRole, searchParams]);
 
   const handleRoleSwitch = (roleId: UserRole) => {
     if (user && firestore) {

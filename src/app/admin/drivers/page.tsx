@@ -13,8 +13,9 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, 
   DialogHeader, DialogTitle, DialogTrigger 
 } from '@/components/ui/dialog';
-import { Search, Plus, Truck, User, Mail, Loader2, Hospital, ChevronRight } from 'lucide-react';
+import { Search, Plus, Truck, User, Mail, Loader2, Hospital, ChevronRight, ExternalLink } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function AdminDriversPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,14 +83,14 @@ export default function AdminDriversPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">기사 계정 관리</h1>
-          <p className="text-muted-foreground font-medium text-sm">시스템에 등록된 수거 기사들을 조회하고 계정을 생성합니다.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">기사 관리</h1>
+          <p className="text-muted-foreground font-medium text-sm">시스템에 등록된 수거 기사들을 관리하고 전용 링크를 발급합니다.</p>
         </div>
         
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20 bg-primary">
-              <Plus className="h-5 w-5" /> 신규 기사 계정 생성
+              <Plus className="h-5 w-5" /> 신규 기사 직접 등록
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-[425px] rounded-2xl">
@@ -161,6 +162,13 @@ export default function AdminDriversPage() {
                       <Hospital className="h-4 w-4 text-slate-300" />
                       <span className="font-bold text-primary">담당 병원: {hospCount}개</span>
                     </div>
+                  </div>
+                  <div className="pt-4">
+                    <Button variant="outline" className="w-full rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50 group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-100" asChild>
+                      <Link href={`/admin/drivers/${driver.id}`}>
+                        관리 및 배정 현황 <ChevronRight className="h-4 w-4 ml-1" />
+                      </Link>
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
