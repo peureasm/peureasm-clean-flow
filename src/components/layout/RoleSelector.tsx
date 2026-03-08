@@ -1,7 +1,7 @@
 
 "use client"
 
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
@@ -11,7 +11,7 @@ import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-export default function RoleSelector() {
+function RoleSelectorContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -216,5 +216,13 @@ export default function RoleSelector() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function RoleSelector() {
+  return (
+    <Suspense fallback={null}>
+      <RoleSelectorContent />
+    </Suspense>
   );
 }
