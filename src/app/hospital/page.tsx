@@ -1,17 +1,21 @@
 
 "use client";
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, doc } from 'firebase/firestore';
+import { collection, query, where, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function HospitalDashboard() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const { toast } = useToast();
+  const [isLinking, setIsLinking] = useState(false);
 
   // 1. 사용자 프로필 조회
   const userDocRef = useMemoFirebase(() => {
@@ -41,6 +45,25 @@ export default function HospitalDashboard() {
 
   const { data: myRequests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
+  const handleLinkTestHospital = async () => {
+    if (!firestore || !user) return;
+    setIsLinking(true);
+    try {
+      await setDoc(doc(firestore, 'users', user.uid), {
+        hospitalId: 'test-hosp-id',
+        role: 'HOSPITAL',
+        name: user.displayName || '테스트 담당자',
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      
+      toast({ title: "테스트 병원 연결 완료", description: "이제 테스트 병원의 관리자로 활동합니다." });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
   const stats = {
     totalThisMonth: myRequests?.length || 0,
     pending: myRequests?.filter(r => !['종결', '병원확인완료'].includes(r.currentStatus)).length || 0
@@ -57,17 +80,31 @@ export default function HospitalDashboard() {
 
   if (!userData?.hospitalId) {
     return (
-      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-6 max-w-md mx-auto min-h-screen">
+      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-8 max-w-md mx-auto min-h-screen">
         <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
           <AlertCircle className="h-10 w-10" />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-bold text-slate-900">소속된 병원이 없습니다</h2>
-          <p className="text-sm text-muted-foreground">관리자가 공유한 초대 링크로 접속하거나, 관리자 페이지에서 계정을 병원에 배정해 주세요.</p>
+        <div className="space-y-3">
+          <h2 className="text-2xl font-black text-slate-900">소속된 병원이 없습니다</h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            관리자가 배정한 병원 정보가 없습니다.<br/>
+            빠른 테스트를 위해 아래 버튼을 클릭하여 <span className="font-bold text-primary">테스트 병원</span>에 접속해 보세요.
+          </p>
         </div>
-        <Button asChild variant="outline" className="rounded-xl border-slate-200">
-          <Link href="/">홈으로 가기</Link>
-        </Button>
+        <div className="w-full space-y-3">
+          <Button 
+            onClick={handleLinkTestHospital} 
+            disabled={isLinking}
+            className="w-full h-16 rounded-2xl bg-primary text-white font-black text-lg gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
+          >
+            {isLinking ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6 text-accent" />}
+            테스트 병원으로 즉시 시작
+          </Button>
+          <Button asChild variant="ghost" className="w-full text-slate-400 font-bold">
+            <Link href="/">홈으로 가기</Link>
+          </Button>
+        </div>
+        <p className="text-[11px] text-slate-400 italic">* 관리자 화면의 '시스템 설정'에서 데모 환경을 먼저 구축해야 합니다.</p>
       </div>
     );
   }

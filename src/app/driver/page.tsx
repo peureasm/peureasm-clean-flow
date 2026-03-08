@@ -1,17 +1,21 @@
 
 "use client"
 
+import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, Truck, PackageCheck, Loader2, AlertCircle } from 'lucide-react';
+import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, Truck, PackageCheck, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { collection, query, where, limit, setDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 export default function DriverDashboard() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
+  const [isLinking, setIsLinking] = useState(false);
 
   // 1. 현재 로그인한 기사(user.uid)에게 배정된 병원 목록 조회
   const assignedHospitalsQuery = useMemoFirebase(() => {
@@ -24,17 +28,13 @@ export default function DriverDashboard() {
 
   const { data: assignedHospitals, isLoading: isHospLoading } = useCollection(assignedHospitalsQuery);
   
-  // 병원 ID들을 추출하여 요청 쿼리에 사용
   const assignedHospitalIds = useMemoFirebase(() => {
     return assignedHospitals?.map(h => h.id) || [];
   }, [assignedHospitals]);
 
-  // 2. 수거/납품 대기 중인 요청 조회 (배정된 병원 ID 리스트 기반)
+  // 2. 수거/납품 대기 중인 요청 조회
   const collectionQuery = useMemoFirebase(() => {
     if (!firestore || !user || assignedHospitalIds.length === 0) return null;
-    
-    // Firestore 'in' 쿼리는 최대 30개까지 지원합니다.
-    // 배정된 병원 ID들을 기준으로 필터링하여 기사 전용 데이터를 가져옵니다.
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', 'in', assignedHospitalIds.slice(0, 30)),
@@ -44,7 +44,35 @@ export default function DriverDashboard() {
 
   const { data: allRequests, isLoading: isReqLoading } = useCollection(collectionQuery);
 
-  // 상태 필터링 (제출=수거전, 출고=납품전)
+  const handleLinkTestDriver = async () => {
+    if (!firestore || !user) return;
+    setIsLinking(true);
+    try {
+      // 내 프로필을 DRIVER로 업데이트
+      await setDoc(doc(firestore, 'users', user.uid), {
+        role: 'DRIVER',
+        name: user.displayName || '테스트 기사님',
+        isActive: true,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+
+      // 테스트 병원의 담당 기사를 내 UID로 교체
+      const testHospRef = doc(firestore, 'hospitals', 'test-hosp-id');
+      await updateDoc(testHospRef, {
+        assignedDriverId: user.uid,
+        assignedDriverName: user.displayName || '테스트 기사님',
+        updatedAt: serverTimestamp()
+      });
+
+      toast({ title: "테스트 기사 연결 완료", description: "이제 배정된 테스트 병원의 수거를 시작할 수 있습니다." });
+    } catch (e) {
+      console.error(e);
+      toast({ variant: "destructive", title: "연결 실패", description: "먼저 관리자 설정에서 데모 환경을 구축해 주세요." });
+    } finally {
+      setIsLinking(false);
+    }
+  };
+
   const collectionList = allRequests?.filter(r => r.currentStatus === '제출') || [];
   const deliveryList = allRequests?.filter(r => r.currentStatus === '출고') || [];
 
@@ -70,18 +98,28 @@ export default function DriverDashboard() {
       </section>
 
       {!isHospLoading && assignedHospitalIds.length === 0 ? (
-        <div className="p-12 text-center bg-slate-800/50 rounded-3xl border-2 border-dashed border-white/5 space-y-4">
-          <AlertCircle className="h-12 w-12 text-orange-500 mx-auto" />
-          <div>
-            <p className="text-slate-200 font-black text-lg">배정된 병원이 없습니다.</p>
-            <p className="text-[11px] text-slate-400 mt-2 leading-relaxed">
-              본인의 ID: <span className="text-secondary font-mono">{user?.uid}</span><br/>
-              관리자 페이지에서 위 ID를 병원 담당 기사로 지정해 주세요.
-            </p>
+        <div className="p-10 text-center bg-slate-800/50 rounded-[40px] border-2 border-dashed border-white/5 space-y-8">
+          <div className="space-y-4">
+            <AlertCircle className="h-16 w-16 text-orange-500 mx-auto" />
+            <div className="space-y-2">
+              <p className="text-slate-200 font-black text-2xl">배정된 병원 없음</p>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                현재 수거를 담당할 거점 병원이 지정되지 않았습니다.<br/>
+                원활한 테스트를 위해 <span className="text-secondary font-bold">테스트 전담 기사</span>로 활동해 보세요.
+              </p>
+            </div>
           </div>
-          <Button variant="outline" className="w-full border-white/10 text-white rounded-xl" onClick={() => window.location.reload()}>
-            상태 새로고침
-          </Button>
+          <div className="space-y-3">
+            <Button 
+              onClick={handleLinkTestDriver}
+              disabled={isLinking}
+              className="w-full h-16 rounded-2xl bg-secondary text-secondary-foreground font-black text-lg gap-3 shadow-2xl shadow-secondary/20 hover:scale-[1.02] transition-all"
+            >
+              {isLinking ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6" />}
+              테스트 기사로 즉시 시작
+            </Button>
+            <p className="text-[10px] text-slate-500 italic">클릭 시 '서울 메디컬 테스트 병원'의 담당자로 지정됩니다.</p>
+          </div>
         </div>
       ) : (
         <>
