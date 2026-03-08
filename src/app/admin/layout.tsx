@@ -1,7 +1,7 @@
 
 import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, CreditCard, LogOut, Package } from 'lucide-react';
+import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, CreditCard, LogOut, Package, Truck } from 'lucide-react';
 import Link from 'next/link';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -59,6 +59,13 @@ function AdminSidebar() {
             <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="병원 관리">
               <Link href="/admin/hospitals">
                 <Hospital /> <span>병원 관리</span>
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+          <SidebarMenuItem>
+            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="기사 관리">
+              <Link href="/admin/drivers">
+                <Truck /> <span>기사 관리</span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
