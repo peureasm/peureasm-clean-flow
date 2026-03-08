@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -82,12 +81,13 @@ export default function AdminRequestsPage() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">전체 요청 내역</h1>
+          <h1 className="text-3xl font-black tracking-tight text-slate-900">전체 요청 내역</h1>
           <p className="text-muted-foreground font-medium">시스템에 등록된 모든 세탁 수거 및 납품 요청을 관리하고 분석합니다.</p>
         </div>
         <Button 
           onClick={handleExportExcel} 
-          className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-12 px-6 shadow-lg shadow-emerald-500/20 font-bold border-none transition-all active:scale-95"
+          variant="secondary"
+          className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-secondary/20 border-none transition-all active:scale-95"
         >
           <FileSpreadsheet className="h-5 w-5" /> 엑셀 다운로드
         </Button>
@@ -107,21 +107,21 @@ export default function AdminRequestsPage() {
                   placeholder="병원명 검색..." 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-9 rounded-xl border-slate-200 h-10 w-[200px]"
+                  className="pl-9 rounded-xl border-slate-200 h-10 w-[200px] font-medium"
                 />
               </div>
               <Input 
                 type="date" 
                 value={filterDate}
                 onChange={(e) => setFilterDate(e.target.value)}
-                className="rounded-xl border-slate-200 h-10 w-[160px]"
+                className="rounded-xl border-slate-200 h-10 w-[160px] font-medium"
               />
               {(searchTerm || filterDate) && (
                 <Button 
                   variant="ghost" 
                   size="sm" 
                   onClick={() => {setSearchTerm(""); setFilterDate("");}}
-                  className="text-xs text-slate-500"
+                  className="text-xs text-slate-500 hover:bg-slate-100"
                 >
                   필터 초기화
                 </Button>
@@ -149,14 +149,14 @@ export default function AdminRequestsPage() {
               <TableBody>
                 {filteredRequests.map((req) => (
                   <TableRow key={req.id} className="hover:bg-slate-50/30 transition-colors">
-                    <TableCell className="font-bold text-slate-800">{req.hospitalName}</TableCell>
+                    <TableCell className="font-black text-slate-800">{req.hospitalName}</TableCell>
                     <TableCell className="text-sm font-medium">{req.requestDate}</TableCell>
                     <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
-                    <TableCell className="text-xs text-muted-foreground">
+                    <TableCell className="text-xs text-muted-foreground font-medium">
                       {new Date(req.updatedAt || req.createdAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" asChild className="rounded-full h-8 w-8">
+                      <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9 hover:bg-primary/10 hover:text-primary">
                         <Link href={`/admin/requests/${req.id}`}>
                           <ArrowRight className="h-4 w-4" />
                         </Link>

@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from 'react';
@@ -96,7 +95,7 @@ export default function DriverCollectionDetail() {
   return (
     <div className="bg-slate-900 min-h-screen pb-32 text-slate-50">
       <div className="sticky top-0 z-20 bg-slate-900/90 backdrop-blur-md border-b border-white/10 p-4 flex items-center justify-between shadow-lg">
-        <Link href="/driver" className="p-2 hover:bg-white/5 rounded-full transition-colors">
+        <Link href="/driver" className="p-2 hover:bg-white/10 rounded-full transition-colors">
           <ChevronLeft className="h-7 w-7" />
         </Link>
         <h1 className="text-lg font-black tracking-tight text-white">현장 수거 확인</h1>
@@ -199,15 +198,15 @@ export default function DriverCollectionDetail() {
             <p className="text-base font-black text-white">담당자 현장 확인</p>
           </div>
           <p className="text-sm text-slate-300 leading-relaxed font-medium">실제 수거 수량을 병원 담당자에게 공유하고 최종 확인을 받았음을 서약합니다.</p>
-          <Button variant="outline" className="w-full h-12 border-white/10 bg-transparent text-slate-200 rounded-2xl font-bold hover:bg-white/5">
+          <Button variant="outline" className="w-full h-12 border-white/10 bg-transparent text-slate-200 rounded-2xl font-bold hover:bg-white/10">
             담당자 서명 / 확인 (선택)
           </Button>
         </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 flex gap-3 z-30 max-w-lg mx-auto">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-slate-900/90 backdrop-blur-xl border-t border-white/10 flex gap-3 z-30 max-w-lg mx-auto shadow-2xl">
         <Button 
-          className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-secondary-foreground shadow-2xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
+          className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-secondary-foreground shadow-2xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all hover:bg-secondary/90"
           onClick={handleComplete}
           disabled={hasDiscrepancy && (!reason)}
         >
