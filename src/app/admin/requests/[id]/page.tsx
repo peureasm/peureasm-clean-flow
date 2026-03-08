@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital } from 'lucide-react';
+import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital, FileSpreadsheet } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -14,6 +14,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LAUNDRY_ITEMS } from '@/app/lib/data';
 import { useState } from 'react';
 import { aiDiscrepancyResolutionAssistant, AiDiscrepancyResolutionAssistantOutput } from '@/ai/flows/ai-discrepancy-resolution-assistant-flow';
+import * as XLSX from 'xlsx';
 
 export default function AdminRequestDetailPage() {
   const { id } = useParams();
@@ -55,6 +56,49 @@ export default function AdminRequestDetailPage() {
     }
   };
 
+  const handleExportExcel = () => {
+    if (!request || !items || items.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "다운로드 불가",
+        description: "내보낼 품목 데이터가 없습니다.",
+      });
+      return;
+    }
+
+    try {
+      // 엑셀 데이터 가공
+      const excelData = items.map(item => ({
+        "품목명": item.itemName,
+        "병원 요청 수량": item.requestedQuantity || 0,
+        "기사 확인 수량": item.verifiedQuantity ?? "-",
+        "최종 납품 수량": item.deliveredQuantity ?? "-",
+        "수량 차이(병원-기사)": item.verifiedQuantity !== undefined ? (item.verifiedQuantity - item.requestedQuantity) : "-"
+      }));
+
+      // 워크북 생성
+      const worksheet = XLSX.utils.json_to_sheet(excelData);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "품목상세");
+
+      // 파일 다운로드
+      const fileName = `MediLaundry_상세내역_${request.hospitalName}_${request.requestDate}.xlsx`;
+      XLSX.writeFile(workbook, fileName);
+
+      toast({
+        title: "엑셀 다운로드 완료",
+        description: `${fileName} 파일이 생성되었습니다.`,
+      });
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast({
+        variant: "destructive",
+        title: "다운로드 오류",
+        description: "엑셀 파일을 생성하는 중 오류가 발생했습니다.",
+      });
+    }
+  };
+
   if (isReqLoading || isItemsLoading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -79,6 +123,9 @@ export default function AdminRequestDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+           <Button variant="outline" className="rounded-xl gap-2" onClick={handleExportExcel}>
+             <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> 엑셀 다운로드
+           </Button>
            <Button variant="outline" className="rounded-xl" onClick={() => window.print()}>문서 출력</Button>
            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 gap-2" onClick={handleResolveAI} disabled={isResolving}>
              <Sparkles className="h-4 w-4" /> {isResolving ? 'AI 분석 중...' : 'AI 분석'}
