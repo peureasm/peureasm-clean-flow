@@ -36,9 +36,15 @@ export default function AdminStatsPage() {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .map(([date, count]) => ({ date, count }));
 
-  const contaminationRate = requests?.length 
-    ? (requests.filter(r => r.isContaminated).length / requests.length * 100).toFixed(1)
-    : 0;
+  // 실제 데이터 기반 계산
+  const totalRequests = requests?.length || 0;
+  const contaminationRate = totalRequests 
+    ? (requests!.filter(r => r.isContaminated).length / totalRequests * 100).toFixed(1)
+    : "0.0";
+  
+  const completionRate = totalRequests
+    ? (requests!.filter(r => ['납품완료', '병원확인완료', '종결'].includes(r.currentStatus)).length / totalRequests * 100).toFixed(1)
+    : "0.0";
 
   return (
     <div className="space-y-8">
@@ -55,7 +61,7 @@ export default function AdminStatsPage() {
             </div>
             <div>
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">누적 총 요청</p>
-              <p className="text-2xl font-black">{requests?.length || 0}건</p>
+              <p className="text-2xl font-black">{totalRequests}건</p>
             </div>
           </CardContent>
         </Card>
@@ -76,8 +82,8 @@ export default function AdminStatsPage() {
               <TrendingUp className="h-6 w-6" />
             </div>
             <div>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">이번 달 처리율</p>
-              <p className="text-2xl font-black">94.2%</p>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">전체 공정 완료율</p>
+              <p className="text-2xl font-black">{completionRate}%</p>
             </div>
           </CardContent>
         </Card>
@@ -92,7 +98,7 @@ export default function AdminStatsPage() {
           <CardContent className="p-6 h-[350px]">
             {isLoading ? (
               <div className="flex items-center justify-center h-full text-slate-300 italic">차트 로딩 중...</div>
-            ) : (
+            ) : lineData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={lineData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
@@ -105,6 +111,8 @@ export default function AdminStatsPage() {
                   <Line type="monotone" dataKey="count" stroke="#336699" strokeWidth={3} dot={{ r: 4, fill: '#336699' }} activeDot={{ r: 6 }} />
                 </LineChart>
               </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-300 text-sm">데이터가 없습니다.</div>
             )}
           </CardContent>
         </Card>
@@ -117,7 +125,7 @@ export default function AdminStatsPage() {
           <CardContent className="p-6 h-[350px]">
             {isLoading ? (
               <div className="flex items-center justify-center h-full text-slate-300 italic">차트 로딩 중...</div>
-            ) : (
+            ) : pieData.length > 0 ? (
               <div className="flex flex-col md:flex-row items-center h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -147,6 +155,8 @@ export default function AdminStatsPage() {
                   ))}
                 </div>
               </div>
+            ) : (
+              <div className="flex items-center justify-center h-full text-slate-300 text-sm">데이터가 없습니다.</div>
             )}
           </CardContent>
         </Card>

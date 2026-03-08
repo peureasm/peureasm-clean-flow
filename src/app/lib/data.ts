@@ -3,13 +3,13 @@ import { LaundryRequest, Hospital, LaundryItem } from './types';
 
 /**
  * 시스템 마스터 데이터: 병원 목록
- * 정식 테스트를 위해 모든 더미 데이터를 완전히 제거했습니다.
+ * 모든 더미 데이터를 완전히 제거했습니다. 데이터는 오직 Firestore에서 관리됩니다.
  */
 export const HOSPITALS: Hospital[] = [];
 
 /**
  * 시스템 마스터 데이터: 세탁 품목 정의
- * 해당 데이터는 시스템의 표준 품목으로 유지됩니다.
+ * 해당 데이터는 시스템의 표준 품목 스키마로 유지됩니다.
  */
 export const LAUNDRY_ITEMS: LaundryItem[] = [
   { id: 'i1', name: '환자복(상/하)', unit: '세트', pricePerUnit: 1200 },

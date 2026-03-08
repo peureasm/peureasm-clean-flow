@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, getDocs, doc } from 'firebase/firestore';
+import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Trash2, Database, ShieldAlert, CheckCircle2, Loader2, Hospital, Truck } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState<string | null>(null);
 
-  // 데이터 삭제 통합 함수
+  // 데이터 삭제 통합 함수 (하위 컬렉션 고려)
   const clearCollection = async (collectionName: string, label: string) => {
     if (!firestore) return;
     setIsResetting(collectionName);
@@ -39,7 +39,15 @@ export default function AdminSettingsPage() {
         return;
       }
 
-      const deletePromises = querySnapshot.docs.map(d => {
+      // 개별 문서 삭제 (비동기 처리)
+      const deletePromises = querySnapshot.docs.map(async (d) => {
+        // 만약 collectionRequests라면 하위 items도 가져와서 지워야 함
+        if (collectionName === 'collectionRequests') {
+          const itemsSnapshot = await getDocs(collection(firestore, `collectionRequests/${d.id}/items`));
+          itemsSnapshot.docs.forEach(itemDoc => {
+            deleteDocumentNonBlocking(doc(firestore, `collectionRequests/${d.id}/items`, itemDoc.id));
+          });
+        }
         return deleteDocumentNonBlocking(doc(firestore, collectionName, d.id));
       });
 
@@ -82,7 +90,6 @@ export default function AdminSettingsPage() {
         </CardHeader>
         <CardContent className="p-8 space-y-6">
           
-          {/* 수거 요청 초기화 */}
           <ResetSection 
             title="수거 요청 내역 초기화"
             description="현재 진행 중인 공정과 과거 이력을 모두 삭제합니다. 병원/기사 계정은 유지됩니다."
@@ -92,7 +99,6 @@ export default function AdminSettingsPage() {
             color="orange"
           />
 
-          {/* 병원 마스터 초기화 */}
           <ResetSection 
             title="병원 정보 초기화"
             description="시스템에 등록된 모든 병원 마스터 정보를 삭제합니다."
@@ -102,10 +108,9 @@ export default function AdminSettingsPage() {
             color="destructive"
           />
 
-          {/* 사용자 계정 초기화 */}
           <ResetSection 
             title="사용자/기사 프로필 초기화"
-            description="등록된 모든 사용자 계정 정보를 삭제합니다. (본인 제외)"
+            description="등록된 모든 사용자 계정 정보를 삭제합니다. (관리자 본인은 유지 권장)"
             icon={<Truck className="h-5 w-5" />}
             onReset={() => clearCollection('users', '사용자 프로필')}
             isLoading={isResetting === 'users'}
@@ -158,7 +163,7 @@ function ResetSection({ title, description, icon, onReset, isLoading, color }: a
       
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant={isDestructive ? "destructive" : "default"} className="rounded-2xl h-12 px-6 font-black gap-2 min-w-[140px] bg-slate-900 hover:bg-slate-800">
+          <Button variant={isDestructive ? "destructive" : "default"} className="rounded-2xl h-12 px-6 font-black gap-2 min-w-[140px] bg-slate-900 hover:bg-slate-800 text-white border-none">
             <Trash2 className="h-4 w-4" /> 내역 초기화
           </Button>
         </AlertDialogTrigger>
@@ -173,7 +178,7 @@ function ResetSection({ title, description, icon, onReset, isLoading, color }: a
             <AlertDialogCancel className="rounded-xl border-slate-200 font-bold">취소</AlertDialogCancel>
             <AlertDialogAction 
               onClick={onReset} 
-              className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-black"
+              className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-black border-none"
               disabled={isLoading}
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
