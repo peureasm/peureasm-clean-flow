@@ -59,7 +59,7 @@ export default function HospitalDetailPage() {
     );
   }, [firestore, id]);
 
-  // 전체 기사 목록 조회 (배정용)
+  // 전체 기사 목록 조회 (배정용) - 실제 DRIVER 역할을 가진 유저만
   const driversQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -80,7 +80,7 @@ export default function HospitalDetailPage() {
     const email = formData.get('staffEmail') as string;
     const name = formData.get('staffName') as string;
     
-    // 유저 프로필 생성 (Prototype에서는 이메일 앞자리를 UID 대용으로 사용하거나 랜덤 생성)
+    // 유저 프로필 생성 (임시 계정)
     const tempUid = `hospital_staff_${Math.random().toString(36).slice(2, 9)}`;
     const userRef = doc(firestore, 'users', tempUid);
 
@@ -95,8 +95,8 @@ export default function HospitalDetailPage() {
     }, { merge: true });
 
     toast({
-      title: "담당자 계정 생성 완료",
-      description: `${name} 담당자 계정이 생성되었습니다. (ID: ${tempUid})`,
+      title: "담당자 프로필 생성",
+      description: `${name} 담당자의 정보가 등록되었습니다. (초대 링크 사용 권장)`,
     });
     setIsAddStaffOpen(false);
   };
@@ -105,14 +105,14 @@ export default function HospitalDetailPage() {
     if (!firestore || !id || !hospitalRef) return;
 
     updateDocumentNonBlocking(hospitalRef, {
-      assignedDriverId: driver.id,
+      assignedDriverId: driver.id, // 유저의 uid (Firestore 문서 ID)
       assignedDriverName: driver.name,
       updatedAt: new Date().toISOString()
     });
 
     toast({
-      title: "기사 배정 완료",
-      description: `${driver.name} 기사님이 이 병원의 전담 기사로 배정되었습니다.`,
+      title: "전담 기사 매칭 완료",
+      description: `${driver.name} 기사님이 ${hospital?.name}의 담당자로 지정되었습니다.`,
     });
   };
 
@@ -125,8 +125,8 @@ export default function HospitalDetailPage() {
     const link = getInviteLink();
     navigator.clipboard.writeText(link);
     toast({
-      title: "초대 링크 복사 완료",
-      description: "병원 담당자에게 전달할 초대 링크가 복사되었습니다.",
+      title: "병원 초대 링크 복사",
+      description: "담당자에게 전달할 고유 접속 URL이 복사되었습니다.",
     });
     setIsShareOpen(false);
   };
@@ -143,13 +143,13 @@ export default function HospitalDetailPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">{hospital.name}</h1>
-            <p className="text-sm text-muted-foreground">병원 코드: {hospital.id}</p>
+            <p className="text-sm text-muted-foreground uppercase font-mono">Hospital Code: {hospital.id}</p>
           </div>
         </div>
         <div className="flex gap-2">
           <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 border-primary text-primary hover:bg-primary/5">
+              <Button variant="outline" className="rounded-xl gap-2 border-primary text-primary hover:bg-primary/5 h-12">
                 <Share2 className="h-4 w-4" /> 초대 링크 공유
               </Button>
             </DialogTrigger>
@@ -157,7 +157,7 @@ export default function HospitalDetailPage() {
               <DialogHeader>
                 <DialogTitle>병원 담당자 초대 링크</DialogTitle>
                 <DialogDescription>
-                  이 링크를 담당자에게 전달하면, 해당 담당자는 자동으로 {hospital.name} 담당자로 등록됩니다.
+                  이 링크로 접속하면 자동으로 {hospital.name}의 담당자 권한을 획득합니다.
                 </DialogDescription>
               </DialogHeader>
               <div className="py-4">
@@ -169,23 +169,23 @@ export default function HospitalDetailPage() {
                 </div>
               </div>
               <DialogFooter>
-                <Button onClick={handleCopyLink} className="w-full rounded-xl h-12 font-bold">초대 링크 복사</Button>
+                <Button onClick={handleCopyLink} className="w-full rounded-xl h-12 font-bold bg-primary text-white">링크 복사하기</Button>
               </DialogFooter>
             </DialogContent>
           </Dialog>
 
           <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-xl gap-2 bg-primary">
-                <UserPlus className="h-4 w-4" /> 담당자 계정 생성
+              <Button className="rounded-xl gap-2 bg-slate-900 h-12">
+                <UserPlus className="h-4 w-4" /> 담당자 수동 등록
               </Button>
             </DialogTrigger>
             <DialogContent className="rounded-2xl">
               <form onSubmit={handleAddStaff}>
                 <DialogHeader>
-                  <DialogTitle>병원 담당자 계정 직접 생성</DialogTitle>
+                  <DialogTitle>병원 담당자 수동 등록</DialogTitle>
                   <DialogDescription>
-                    {hospital.name} 소속의 담당자 계정을 수동으로 생성합니다.
+                    병원 담당자의 정보를 미리 입력합니다. 실제 데이터 연동을 위해서는 초대 링크 공유를 권장합니다.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-6">
@@ -199,7 +199,7 @@ export default function HospitalDetailPage() {
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button type="submit" className="w-full rounded-xl h-12">계정 생성</Button>
+                  <Button type="submit" className="w-full rounded-xl h-12 font-bold">프로필 저장</Button>
                 </DialogFooter>
               </form>
             </DialogContent>
@@ -229,8 +229,8 @@ export default function HospitalDetailPage() {
               <div className="flex items-start gap-3">
                 <Truck className="h-5 w-5 text-slate-400 mt-0.5" />
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">배정 기사</p>
-                  <p className="text-sm font-bold text-primary">{hospital.assignedDriverName || '미배정'}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">전담 수거 기사</p>
+                  <p className="text-sm font-bold text-primary">{hospital.assignedDriverName || '미배정 (기사 배정 탭에서 선택)'}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -249,13 +249,13 @@ export default function HospitalDetailPage() {
             <div className="px-6 pt-4 border-b">
               <TabsList className="bg-transparent h-12 gap-6">
                 <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold">
-                  <ClipboardList className="h-4 w-4 mr-2" /> 요청 내역
+                  <ClipboardList className="h-4 w-4 mr-2" /> 공정 이력
                 </TabsTrigger>
                 <TabsTrigger value="staff" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold">
-                  <ShieldCheck className="h-4 w-4 mr-2" /> 계정 관리
+                  <ShieldCheck className="h-4 w-4 mr-2" /> 계정 현황
                 </TabsTrigger>
                 <TabsTrigger value="drivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold">
-                  <Truck className="h-4 w-4 mr-2" /> 기사 배정
+                  <Truck className="h-4 w-4 mr-2" /> 기사 매칭
                 </TabsTrigger>
               </TabsList>
             </div>
@@ -263,14 +263,14 @@ export default function HospitalDetailPage() {
             <TabsContent value="requests" className="m-0">
               <div className="p-0">
                 {isReqLoading ? (
-                  <div className="p-12 text-center text-slate-300 italic">내역 로딩 중...</div>
+                  <div className="p-12 text-center text-slate-300 italic">데이터 로딩 중...</div>
                 ) : requests && requests.length > 0 ? (
                   <Table>
                     <TableHeader className="bg-slate-50/50">
                       <TableRow>
-                        <TableHead className="font-bold text-xs">요청일</TableHead>
-                        <TableHead className="font-bold text-xs">상태</TableHead>
-                        <TableHead className="text-right font-bold text-xs">상세</TableHead>
+                        <TableHead className="font-bold text-xs uppercase">요청일</TableHead>
+                        <TableHead className="font-bold text-xs uppercase">상태</TableHead>
+                        <TableHead className="text-right font-bold text-xs uppercase">상세</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -290,7 +290,7 @@ export default function HospitalDetailPage() {
                     </TableBody>
                   </Table>
                 ) : (
-                  <div className="p-20 text-center text-slate-300 italic">요청 내역이 없습니다.</div>
+                  <div className="p-20 text-center text-slate-300 italic">진행된 공정이 없습니다.</div>
                 )}
               </div>
             </TabsContent>
@@ -298,13 +298,13 @@ export default function HospitalDetailPage() {
             <TabsContent value="staff" className="m-0">
               <div className="p-0">
                 {isStaffLoading ? (
-                  <div className="p-12 text-center text-slate-300">로딩 중...</div>
+                  <div className="p-12 text-center text-slate-300">사용자 조회 중...</div>
                 ) : staff && staff.length > 0 ? (
                   <Table>
                     <TableHeader className="bg-slate-50/50">
                       <TableRow>
                         <TableHead className="font-bold text-xs uppercase">성함</TableHead>
-                        <TableHead className="font-bold text-xs uppercase">아이디(이메일)</TableHead>
+                        <TableHead className="font-bold text-xs uppercase">아이디</TableHead>
                         <TableHead className="text-right font-bold text-xs">상태</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -321,7 +321,7 @@ export default function HospitalDetailPage() {
                     </TableBody>
                   </Table>
                 ) : (
-                  <div className="p-20 text-center text-slate-300">등록된 담당자 계정이 없습니다.</div>
+                  <div className="p-20 text-center text-slate-300">등록된 병원 담당자가 없습니다. 초대 링크를 공유하세요.</div>
                 )}
               </div>
             </TabsContent>
@@ -329,33 +329,33 @@ export default function HospitalDetailPage() {
             <TabsContent value="drivers" className="m-0">
               <div className="p-0">
                 <div className="p-6 bg-slate-50/50 border-b">
-                  <h3 className="text-sm font-bold text-slate-700">전담 기사 배정</h3>
-                  <p className="text-xs text-muted-foreground">이 병원의 세탁물 수거를 담당할 기사를 목록에서 선택하세요.</p>
+                  <h3 className="text-sm font-bold text-slate-700">전담 수거 기사 지정</h3>
+                  <p className="text-xs text-muted-foreground">이 병원의 세탁물 수거를 전담할 기사님을 선택하여 매칭합니다.</p>
                 </div>
                 {isDriversLoading ? (
-                  <div className="p-12 text-center text-slate-300">로딩 중...</div>
+                  <div className="p-12 text-center text-slate-300">기사 목록 조회 중...</div>
                 ) : drivers && drivers.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
                         <TableHead className="font-bold">기사명</TableHead>
-                        <TableHead className="font-bold">계정</TableHead>
-                        <TableHead className="text-right font-bold">배정</TableHead>
+                        <TableHead className="font-bold">계정/ID</TableHead>
+                        <TableHead className="text-right font-bold">작업</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {drivers.map((driver) => (
                         <TableRow key={driver.id} className="group">
                           <TableCell className="font-bold">{driver.name}</TableCell>
-                          <TableCell className="text-xs text-slate-500">{driver.username}</TableCell>
+                          <TableCell className="text-xs text-slate-500 font-mono">{driver.id}</TableCell>
                           <TableCell className="text-right">
                             {hospital.assignedDriverId === driver.id ? (
                               <Badge className="bg-primary text-white gap-1 px-3 py-1">
-                                <Check className="h-3 w-3" /> 배정됨
+                                <Check className="h-3 w-3" /> 매칭됨
                               </Badge>
                             ) : (
                               <Button variant="outline" size="sm" className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleAssignDriver(driver)}>
-                                배정하기
+                                담당 기사로 지정
                               </Button>
                             )}
                           </TableCell>
@@ -364,7 +364,10 @@ export default function HospitalDetailPage() {
                     </TableBody>
                   </Table>
                 ) : (
-                  <div className="p-20 text-center text-slate-300">시스템에 등록된 기사가 없습니다.</div>
+                  <div className="p-20 text-center text-slate-300">
+                    시스템에 등록된 기사가 없습니다. <br/>
+                    <Link href="/admin/drivers" className="text-primary font-bold underline">기사 관리</Link>에서 기사를 먼저 등록하세요.
+                  </div>
                 )}
               </div>
             </TabsContent>
