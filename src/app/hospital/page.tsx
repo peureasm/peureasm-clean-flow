@@ -3,7 +3,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2 } from 'lucide-react';
+import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
@@ -44,7 +44,7 @@ export default function HospitalDashboard() {
 
   const stats = {
     totalThisMonth: myRequests?.length || 0,
-    pending: myRequests?.filter(r => ['제출', '수거완료', '공장입고', '세탁중', '건조중', '포장완료', '출고'].includes(r.currentStatus)).length || 0
+    pending: myRequests?.filter(r => !['종결', '병원확인완료'].includes(r.currentStatus)).length || 0
   };
 
   if (isUserLoading || isUserDocLoading || isHospLoading) {
@@ -56,12 +56,20 @@ export default function HospitalDashboard() {
     );
   }
 
-  if (requestsError) {
+  // 병원이 배정되지 않은 경우 (초대 링크 미사용)
+  if (!userData?.hospitalId) {
     return (
-      <div className="p-8 text-center flex flex-col items-center gap-4 text-destructive bg-destructive/5 rounded-3xl m-4">
-        <AlertCircle className="h-12 w-12" />
-        <p className="font-bold">데이터를 불러오는 중 문제가 발생했습니다.</p>
-        <Button onClick={() => window.location.reload()} variant="outline" size="sm">새로고침</Button>
+      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-6 max-w-md mx-auto">
+        <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
+          <AlertCircle className="h-10 w-10" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-bold text-slate-900">배정된 병원이 없습니다</h2>
+          <p className="text-sm text-muted-foreground">관리자로부터 받은 초대 링크를 통해 접속하거나, 관리자에게 문의하여 병원 배정을 요청하세요.</p>
+        </div>
+        <Button asChild variant="outline" className="rounded-xl">
+          <Link href="/">홈으로 돌아가기</Link>
+        </Button>
       </div>
     );
   }
@@ -75,7 +83,7 @@ export default function HospitalDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">반갑습니다, {userData?.name || '담당자'}님</h1>
-            <p className="text-sm text-muted-foreground font-medium">소속: <span className="text-primary font-bold">{hospital?.name || '지정 병원'}</span></p>
+            <p className="text-sm text-muted-foreground font-medium">소속: <span className="text-primary font-bold">{hospital?.name || '정보 로딩 중...'}</span></p>
           </div>
         </div>
       </section>
@@ -114,9 +122,9 @@ export default function HospitalDashboard() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-lg font-bold text-slate-800">최근 진행 내역</h2>
+          <h2 className="text-lg font-bold text-slate-800">우리 병원 최근 내역</h2>
           <Link href="/hospital/requests" className="text-xs text-primary font-bold flex items-center bg-primary/5 px-3 py-1.5 rounded-full">
-            더보기 <ChevronRight className="h-4 w-4" />
+            전체보기 <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
 

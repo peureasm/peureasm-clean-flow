@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { ChevronLeft, Search, Filter, Package, Clock, Calendar, Loader2 } from 'lucide-react';
+import { ChevronLeft, Search, Filter, Package, Clock, Calendar, Loader2, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
@@ -22,9 +22,9 @@ export default function HospitalRequestsPage() {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // 실시간 요청 데이터 구독
+  // 실시간 요청 데이터 구독 (병원 ID로 강력 필터링)
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !userData?.hospitalId) return null;
     return query(
@@ -33,7 +33,7 @@ export default function HospitalRequestsPage() {
     );
   }, [firestore, userData?.hospitalId]);
 
-  const { data: requests, isLoading } = useCollection(requestsQuery);
+  const { data: requests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
   const filteredRequests = requests?.filter(req => 
     req.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -46,13 +46,32 @@ export default function HospitalRequestsPage() {
     return 'pending';
   };
 
+  if (isUserLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!userData?.hospitalId) {
+    return (
+      <div className="p-12 text-center max-w-sm mx-auto mt-20 space-y-4">
+        <AlertCircle className="h-12 w-12 text-orange-400 mx-auto" />
+        <h2 className="text-xl font-bold">권한이 없습니다</h2>
+        <p className="text-sm text-muted-foreground">병원 배정 링크를 통해 접속해 주세요.</p>
+        <Button asChild className="rounded-xl"><Link href="/hospital">대시보드로</Link></Button>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-lg mx-auto bg-[#F8FAFC] min-h-screen">
       <div className="sticky top-0 z-20 bg-white border-b p-4 flex items-center justify-between shadow-sm">
         <Link href="/hospital" className="p-2 hover:bg-slate-50 rounded-full">
           <ChevronLeft className="h-6 w-6" />
         </Link>
-        <h1 className="text-lg font-bold text-slate-900">수거 및 납품 전체 내역</h1>
+        <h1 className="text-lg font-bold text-slate-900">전체 요청 내역</h1>
         <Button variant="ghost" size="icon" className="rounded-full">
           <Filter className="h-5 w-5 text-muted-foreground" />
         </Button>
@@ -77,7 +96,7 @@ export default function HospitalRequestsPage() {
           </TabsList>
 
           <div className="mt-6 space-y-4">
-            {isLoading ? (
+            {isRequestsLoading ? (
               <div className="py-20 flex flex-col items-center gap-4">
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 <p className="text-sm font-bold text-slate-400">데이터 동기화 중...</p>
@@ -104,7 +123,7 @@ export default function HospitalRequestsPage() {
           </div>
         </Tabs>
 
-        {!isLoading && filteredRequests.length === 0 && (
+        {!isRequestsLoading && filteredRequests.length === 0 && (
           <div className="py-20 text-center space-y-4 bg-white rounded-3xl border-2 border-dashed border-slate-100">
             <Package className="h-12 w-12 text-slate-200 mx-auto" />
             <p className="text-slate-400 font-bold">검색된 내역이 없습니다.</p>

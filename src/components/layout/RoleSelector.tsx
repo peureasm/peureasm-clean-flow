@@ -40,7 +40,6 @@ export default function RoleSelector() {
     if (inviteId && user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
       
-      // 사용자 역할 및 병원 ID 자동 업데이트
       updateDoc(userRef, {
         role: 'HOSPITAL',
         hospitalId: inviteId,
@@ -50,11 +49,10 @@ export default function RoleSelector() {
           title: "초대 링크 확인됨",
           description: "해당 병원의 담당자로 설정되었습니다.",
         });
-        // 쿼리 파라미터 제거하고 대시보드로 이동
         router.replace('/hospital');
       });
     }
-  }, [searchParams, user, firestore]);
+  }, [searchParams, user, firestore, router, toast]);
 
   // 자동 익명 로그인
   useEffect(() => {
@@ -63,16 +61,16 @@ export default function RoleSelector() {
     }
   }, [user, isUserLoading, auth]);
 
-  // 사용자가 로그인되었을 때 프로필 생성/업데이트
+  // 사용자가 로그인되었을 때 프로필 생성/업데이트 (초기 진입 시)
   useEffect(() => {
     if (user && firestore && currentPathRole) {
       const userRef = doc(firestore, 'users', user.uid);
+      // 기존 hospitalId가 있다면 유지, 없다면 null로 설정 (하드코딩 제거)
       setDocumentNonBlocking(userRef, {
         id: user.uid,
         username: user.email || `user_${user.uid.slice(0, 5)}`,
         name: user.displayName || '테스트 사용자',
         role: currentPathRole,
-        hospitalId: currentPathRole === 'HOSPITAL' ? 'h1' : null,
         isActive: true,
         updatedAt: serverTimestamp(),
         createdAt: serverTimestamp(),
@@ -85,7 +83,6 @@ export default function RoleSelector() {
       const userRef = doc(firestore, 'users', user.uid);
       setDocumentNonBlocking(userRef, {
         role: roleId,
-        hospitalId: roleId === 'HOSPITAL' ? 'h1' : null,
         updatedAt: serverTimestamp(),
       }, { merge: true });
     }
