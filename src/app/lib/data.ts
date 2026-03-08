@@ -2,8 +2,8 @@
 import { LaundryRequest, Hospital, LaundryItem } from './types';
 
 /**
- * 시스템 마스터 데이터: 병원 목록 (초기화됨)
- * 정식 테스트 시 관리자 페이지에서 직접 등록하여 사용하십시오.
+ * 시스템 마스터 데이터: 병원 목록
+ * 정식 테스트를 위해 모든 더미 데이터를 제거했습니다.
  */
 export const HOSPITALS: Hospital[] = [];
 
@@ -20,7 +20,7 @@ export const LAUNDRY_ITEMS: LaundryItem[] = [
 ];
 
 /**
- * 세탁 요청 더미 데이터 (초기화됨)
- * 모든 데이터는 이제 Firestore 실시간 데이터베이스에서 호출됩니다.
+ * 세탁 요청 데이터
+ * 모든 실제 데이터는 Firestore에서 호출되며, 초기 상태는 비어 있습니다.
  */
 export const DUMMY_REQUESTS: LaundryRequest[] = [];
