@@ -1,13 +1,14 @@
 
 "use client"
 
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
-import { Hospital, Truck, Factory, ShieldCheck, LogIn } from 'lucide-react';
+import { Hospital, Truck, Factory, ShieldCheck, LogIn, ChevronUp, ChevronDown, GripVertical, X } from 'lucide-react';
 import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
+import { cn } from '@/lib/utils';
 
 export default function RoleSelector() {
   const router = useRouter();
@@ -15,6 +16,11 @@ export default function RoleSelector() {
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+
+  const [isOpen, setIsOpen] = useState(false);
+  const [position, setPosition] = useState({ x: 16, y: 16 }); // Bottom-left default
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
 
   const roles: { id: UserRole; label: string; icon: any; color: string }[] = [
     { id: 'HOSPITAL', label: '병원담당자', icon: Hospital, color: 'text-blue-600' },
@@ -44,7 +50,7 @@ export default function RoleSelector() {
         hospitalId: currentPathRole === 'HOSPITAL' ? 'h1' : null,
         isActive: true,
         updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(), // merge: true이므로 최초에만 생성됨
+        createdAt: serverTimestamp(),
       }, { merge: true });
     }
   }, [user, firestore, currentPathRole]);
@@ -59,42 +65,122 @@ export default function RoleSelector() {
       }, { merge: true });
     }
     router.push(`/${roleId.toLowerCase()}`);
+    setIsOpen(false);
   };
 
+  // Dragging Logic
+  const onMouseDown = (e: React.MouseEvent) => {
+    setIsDragging(true);
+    dragRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startPosX: position.x,
+      startPosY: position.y,
+    };
+  };
+
+  useEffect(() => {
+    const onMouseMove = (e: MouseEvent) => {
+      if (!isDragging || !dragRef.current) return;
+      const dx = e.clientX - dragRef.current.startX;
+      const dy = dragRef.current.startY - e.clientY; // Inverted for bottom offset
+      setPosition({
+        x: Math.max(0, dragRef.current.startPosX + dx),
+        y: Math.max(0, dragRef.current.startPosY + dy),
+      });
+    };
+
+    const onMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+  }, [isDragging]);
+
   return (
-    <div className="fixed bottom-4 left-4 z-50 flex flex-wrap gap-2 p-2 bg-white/80 backdrop-blur-md rounded-2xl shadow-2xl border border-border/50">
-      <div className="w-full flex justify-between items-center px-2 mb-1">
-        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter">
-          역할 전환 (Firestore 권한 연동)
-        </span>
-        {user ? (
-          <span className="text-[9px] text-emerald-600 font-bold">인증됨 ({user.uid.slice(0, 5)}...)</span>
-        ) : (
-          <span className="text-[9px] text-orange-600 font-bold">인증 대기 중</span>
-        )}
-      </div>
-      {roles.map((role) => (
+    <div 
+      className="fixed z-50 transition-shadow duration-200"
+      style={{ left: `${position.x}px`, bottom: `${position.y}px` }}
+    >
+      {!isOpen ? (
         <Button
-          key={role.id}
-          variant={currentPathRole === role.id ? 'default' : 'outline'}
-          size="sm"
-          className="rounded-xl h-10 px-3 flex gap-2"
-          onClick={() => handleRoleSwitch(role.id)}
+          onMouseDown={onMouseDown}
+          onClick={() => !isDragging && setIsOpen(true)}
+          className={cn(
+            "h-12 w-12 rounded-full shadow-2xl p-0 flex items-center justify-center bg-primary text-white border-2 border-white/20 hover:scale-105 active:scale-95 transition-transform cursor-grab active:cursor-grabbing",
+            isDragging && "scale-110 shadow-primary/40"
+          )}
         >
-          <role.icon className="h-4 w-4" />
-          <span className="hidden sm:inline">{role.label}</span>
+          <GripVertical className="h-5 w-5 opacity-50 absolute left-1" />
+          <ShieldCheck className="h-6 w-6" />
         </Button>
-      ))}
-      {!user && (
-        <Button 
-          variant="secondary" 
-          size="sm" 
-          className="rounded-xl h-10 px-3 bg-secondary/20"
-          onClick={() => auth && initiateAnonymousSignIn(auth)}
-        >
-          <LogIn className="h-4 w-4" />
-          <span className="hidden sm:inline">로그인 테스트</span>
-        </Button>
+      ) : (
+        <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] border border-slate-200 p-4 w-72 animate-in fade-in zoom-in-95 duration-200">
+          <div 
+            onMouseDown={onMouseDown}
+            className="flex items-center justify-between mb-3 pb-2 border-b border-slate-100 cursor-grab active:cursor-grabbing"
+          >
+            <div className="flex items-center gap-2">
+              <GripVertical className="h-4 w-4 text-slate-300" />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">역할 전환 엔진</span>
+            </div>
+            <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setIsOpen(false)}>
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 gap-2">
+            {roles.map((role) => (
+              <Button
+                key={role.id}
+                variant={currentPathRole === role.id ? 'default' : 'outline'}
+                className={cn(
+                  "justify-start gap-3 rounded-2xl h-12 border-none transition-all",
+                  currentPathRole === role.id ? "bg-primary shadow-lg shadow-primary/20" : "hover:bg-slate-50 text-slate-600"
+                )}
+                onClick={() => handleRoleSwitch(role.id)}
+              >
+                <div className={cn(
+                  "p-1.5 rounded-lg",
+                  currentPathRole === role.id ? "bg-white/20" : "bg-slate-100"
+                )}>
+                  <role.icon className={cn("h-4 w-4", currentPathRole === role.id ? "text-white" : role.color)} />
+                </div>
+                <span className="font-bold text-sm">{role.label}</span>
+                {currentPathRole === role.id && <div className="ml-auto h-2 w-2 rounded-full bg-white animate-pulse" />}
+              </Button>
+            ))}
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="flex flex-col">
+              <span className="text-[9px] font-bold text-slate-400">UID: {user?.uid.slice(0, 8)}...</span>
+              <span className={cn(
+                "text-[9px] font-black",
+                user ? "text-emerald-500" : "text-orange-500"
+              )}>
+                {user ? "AUTHENTICATED" : "NOT LOGGED IN"}
+              </span>
+            </div>
+            {!user && (
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                className="rounded-xl h-8 text-[10px] font-bold bg-secondary/10 text-secondary hover:bg-secondary/20"
+                onClick={() => auth && initiateAnonymousSignIn(auth)}
+              >
+                <LogIn className="h-3 w-3 mr-1" /> 재로그인
+              </Button>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
