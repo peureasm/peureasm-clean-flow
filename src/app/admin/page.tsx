@@ -7,10 +7,11 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Package, Truck, AlertTriangle, CheckCircle, ArrowRight, Sparkles, BrainCircuit, RefreshCw } from 'lucide-react';
+import { Package, Truck, AlertTriangle, CheckCircle, ArrowRight, Sparkles, BrainCircuit, RefreshCw, Hospital } from 'lucide-react';
 import { aiDiscrepancyResolutionAssistant, AiDiscrepancyResolutionAssistantOutput } from '@/ai/flows/ai-discrepancy-resolution-assistant-flow';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, limit } from 'firebase/firestore';
+import Link from 'next/link';
 
 export default function AdminDashboard() {
   const [isResolving, setIsResolving] = useState(false);
@@ -18,19 +19,31 @@ export default function AdminDashboard() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
 
-  // 인덱스 오류를 피하기 위해 단순 쿼리 사용
-  const allRequestsQuery = useMemoFirebase(() => {
+  // 실시간 데이터 구독
+  const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'collectionRequests'), limit(20));
+    return query(collection(firestore, 'collectionRequests'), limit(50));
   }, [firestore, user]);
 
-  const { data: requests, isLoading, error } = useCollection(allRequestsQuery);
+  const hospitalsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'hospitals'), limit(100));
+  }, [firestore, user]);
+
+  const { data: requests, isLoading: isReqLoading } = useCollection(requestsQuery);
+  const { data: hospitals, isLoading: isHospLoading } = useCollection(hospitalsQuery);
+
+  // KPI 계산 (실제 데이터 기반)
+  const activeRequests = requests?.filter(r => !['종결', '병원확인완료'].includes(r.currentStatus)).length || 0;
+  const deliveryCompleted = requests?.filter(r => r.currentStatus === '납품완료').length || 0;
+  const discrepancies = requests?.filter(r => r.discrepancyReason).length || 0;
+  const totalHospitals = hospitals?.length || 0;
 
   const kpis = [
-    { label: '활성 요청', value: requests?.filter(r => !['종결', '병원확인완료'].includes(r.currentStatus)).length || 0, icon: Package, color: 'text-primary' },
-    { label: '납품 완료', value: requests?.filter(r => r.currentStatus === '납품완료').length || 0, icon: Truck, color: 'text-secondary' },
-    { label: '차이 발생', value: requests?.filter(r => r.discrepancyReason).length || 0, icon: AlertTriangle, color: 'text-orange-500' },
-    { label: '최근 정산건', value: '0건', icon: CheckCircle, color: 'text-emerald-500' },
+    { label: '활성 공정', value: `${activeRequests}건`, icon: Package, color: 'text-primary' },
+    { label: '납품 완료', value: `${deliveryCompleted}건`, icon: Truck, color: 'text-secondary' },
+    { label: '이슈 발생', value: `${discrepancies}건`, icon: AlertTriangle, color: 'text-orange-500' },
+    { label: '등록 병원', value: `${totalHospitals}개`, icon: Hospital, color: 'text-emerald-500' },
   ];
 
   const handleResolveAI = async (req: any) => {
@@ -51,33 +64,20 @@ export default function AdminDashboard() {
     }
   };
 
-  if (isUserLoading) return <div className="p-12 text-center text-muted-foreground font-bold">인증 대기 중...</div>;
-
-  if (error) {
-    return (
-      <div className="p-12 flex flex-col items-center justify-center gap-4 bg-white rounded-3xl shadow-sm border border-red-100">
-        <AlertTriangle className="h-12 w-12 text-destructive" />
-        <div className="text-center">
-          <h3 className="text-lg font-bold text-slate-900">데이터를 불러올 수 없습니다</h3>
-          <p className="text-sm text-muted-foreground mt-1">Firebase Console에서 Firestore가 활성화되어 있는지 확인해 주세요.</p>
-        </div>
-        <Button onClick={() => window.location.reload()} variant="outline" className="rounded-xl gap-2">
-          <RefreshCw className="h-4 w-4" /> 다시 시도
-        </Button>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">통합 관제 센터</h1>
-          <p className="text-muted-foreground">실시간 세탁 공정 모니터링 및 AI 분쟁 조율</p>
+          <p className="text-muted-foreground">실시간 세탁 공정 모니터링 및 AI 데이터 통합 분석</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl border-slate-200">시스템 로그</Button>
-          <Button className="bg-primary rounded-xl px-6">월간 정산 보고서</Button>
+          <Button variant="outline" className="rounded-xl border-slate-200" asChild>
+            <Link href="/admin/stats">상세 통계</Link>
+          </Button>
+          <Button className="bg-primary rounded-xl px-6" asChild>
+            <Link href="/admin/hospitals">병원 관리</Link>
+          </Button>
         </div>
       </div>
 
@@ -102,18 +102,20 @@ export default function AdminDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <Card className="lg:col-span-2 border-none shadow-sm rounded-2xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b px-6 py-4">
-            <CardTitle className="text-lg font-bold">전체 요청 타임라인</CardTitle>
-            <Button variant="ghost" size="sm" className="text-primary font-bold">전체보기</Button>
+            <CardTitle className="text-lg font-bold">최근 공정 타임라인</CardTitle>
+            <Button variant="ghost" size="sm" className="text-primary font-bold" asChild>
+              <Link href="/admin/requests">전체보기</Link>
+            </Button>
           </CardHeader>
           <CardContent className="p-0">
-            {isLoading ? (
-              <div className="p-12 text-center text-slate-300 italic">데이터 로딩 중...</div>
+            {isReqLoading ? (
+              <div className="p-12 text-center text-slate-300 italic">실시간 데이터 로딩 중...</div>
             ) : (
               <Table>
                 <TableHeader className="bg-slate-50/50">
                   <TableRow>
                     <TableHead className="font-bold">병원명</TableHead>
-                    <TableHead className="font-bold">날짜</TableHead>
+                    <TableHead className="font-bold">요청일</TableHead>
                     <TableHead className="font-bold">상태</TableHead>
                     <TableHead className="text-right font-bold">상세</TableHead>
                   </TableRow>
@@ -125,12 +127,19 @@ export default function AdminDashboard() {
                       <TableCell className="text-xs text-muted-foreground">{req.requestDate}</TableCell>
                       <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
-                          <ArrowRight className="h-4 w-4" />
+                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" asChild>
+                          <Link href={`/admin/requests/${req.id}`}>
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
+                  {requests?.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="h-32 text-center text-slate-400">등록된 공정 데이터가 없습니다.</TableCell>
+                    </TableRow>
+                  )}
                 </TableBody>
               </Table>
             )}
@@ -148,11 +157,11 @@ export default function AdminDashboard() {
             <CardContent className="p-0">
               {requests?.filter(r => r.discrepancyReason).length ? (
                 <div className="divide-y divide-slate-100">
-                  {requests?.filter(r => r.discrepancyReason).map((req) => (
+                  {requests?.filter(r => r.discrepancyReason).slice(0, 3).map((req) => (
                     <div key={req.id} className="p-4 space-y-3 hover:bg-slate-50">
                       <div className="flex justify-between items-start">
                         <p className="font-bold text-sm text-slate-800">{req.hospitalName}</p>
-                        <Badge className="text-[9px] bg-orange-500 text-white border-none font-bold">Δ 불일치</Badge>
+                        <Badge className="text-[9px] bg-orange-500 text-white border-none font-bold">불일치</Badge>
                       </div>
                       <p className="text-[11px] text-muted-foreground bg-slate-50 p-2 rounded-lg italic">"{req.discrepancyReason}"</p>
                       <Button 
@@ -200,7 +209,7 @@ export default function AdminDashboard() {
                   </div>
                 </div>
                 <Button className="w-full bg-accent text-slate-900 font-bold h-12 rounded-xl" onClick={() => setResolutionResult(null)}>
-                  조치 완료 및 닫기
+                  가이드 닫기
                 </Button>
               </CardContent>
             </Card>
