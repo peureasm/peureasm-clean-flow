@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Package, Truck, AlertTriangle, CheckCircle, ArrowRight, Sparkles, BrainCircuit, RefreshCw, Hospital } from 'lucide-react';
+import { Package, Truck, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, BrainCircuit, RefreshCw, Hospital } from 'lucide-react';
 import { aiDiscrepancyResolutionAssistant, AiDiscrepancyResolutionAssistantOutput } from '@/ai/flows/ai-discrepancy-resolution-assistant-flow';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, limit } from 'firebase/firestore';
@@ -17,7 +17,7 @@ export default function AdminDashboard() {
   const [isResolving, setIsResolving] = useState(false);
   const [resolutionResult, setResolutionResult] = useState<AiDiscrepancyResolutionAssistantOutput | null>(null);
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user } = useUser();
 
   // 실시간 데이터 구독
   const requestsQuery = useMemoFirebase(() => {
@@ -33,7 +33,7 @@ export default function AdminDashboard() {
   const { data: requests, isLoading: isReqLoading } = useCollection(requestsQuery);
   const { data: hospitals, isLoading: isHospLoading } = useCollection(hospitalsQuery);
 
-  // KPI 계산 (실제 데이터 기반)
+  // KPI 계산 (데이터 로딩 완료 후 실제 기반 계산)
   const activeRequests = requests?.filter(r => !['종결', '병원확인완료'].includes(r.currentStatus)).length || 0;
   const deliveryCompleted = requests?.filter(r => r.currentStatus === '납품완료').length || 0;
   const discrepancies = requests?.filter(r => r.discrepancyReason).length || 0;
@@ -75,7 +75,7 @@ export default function AdminDashboard() {
           <Button variant="outline" className="rounded-xl border-slate-200" asChild>
             <Link href="/admin/stats">상세 통계</Link>
           </Button>
-          <Button className="bg-primary rounded-xl px-6" asChild>
+          <Button className="bg-primary rounded-xl px-6 shadow-lg shadow-primary/20" asChild>
             <Link href="/admin/hospitals">병원 관리</Link>
           </Button>
         </div>
@@ -121,23 +121,24 @@ export default function AdminDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {requests?.map((req) => (
-                    <TableRow key={req.id} className="hover:bg-slate-50/30 transition-colors">
-                      <TableCell className="font-bold text-slate-800">{req.hospitalName}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{req.requestDate}</TableCell>
-                      <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" asChild>
-                          <Link href={`/admin/requests/${req.id}`}>
-                            <ArrowRight className="h-4 w-4" />
-                          </Link>
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {requests?.length === 0 && (
+                  {requests && requests.length > 0 ? (
+                    requests.map((req) => (
+                      <TableRow key={req.id} className="hover:bg-slate-50/30 transition-colors">
+                        <TableCell className="font-bold text-slate-800">{req.hospitalName}</TableCell>
+                        <TableCell className="text-xs text-muted-foreground">{req.requestDate}</TableCell>
+                        <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full" asChild>
+                            <Link href={`/admin/requests/${req.id}`}>
+                              <ArrowRight className="h-4 w-4" />
+                            </Link>
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
                     <TableRow>
-                      <TableCell colSpan={4} className="h-32 text-center text-slate-400">등록된 공정 데이터가 없습니다.</TableCell>
+                      <TableCell colSpan={4} className="h-32 text-center text-slate-400 font-medium">등록된 공정 데이터가 없습니다.</TableCell>
                     </TableRow>
                   )}
                 </TableBody>

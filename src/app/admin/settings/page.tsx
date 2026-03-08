@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useFirestore, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, getDocs, doc, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, Trash2, Database, ShieldAlert, CheckCircle2, Loader2, Hospital, Truck } from 'lucide-react';
@@ -25,7 +25,7 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState<string | null>(null);
 
-  // 데이터 삭제 통합 함수 (하위 컬렉션 고려)
+  // 데이터 삭제 통합 함수 (재귀적 삭제 및 에러 핸들링 강화)
   const clearCollection = async (collectionName: string, label: string) => {
     if (!firestore) return;
     setIsResetting(collectionName);
@@ -39,30 +39,30 @@ export default function AdminSettingsPage() {
         return;
       }
 
-      // 개별 문서 삭제 (비동기 처리)
-      const deletePromises = querySnapshot.docs.map(async (d) => {
-        // 만약 collectionRequests라면 하위 items도 가져와서 지워야 함
+      // 개별 문서 순회하며 삭제 처리
+      for (const d of querySnapshot.docs) {
+        // 1. 하위 컬렉션(items) 선제적 삭제 (수거 요청인 경우)
         if (collectionName === 'collectionRequests') {
           const itemsSnapshot = await getDocs(collection(firestore, `collectionRequests/${d.id}/items`));
           itemsSnapshot.docs.forEach(itemDoc => {
             deleteDocumentNonBlocking(doc(firestore, `collectionRequests/${d.id}/items`, itemDoc.id));
           });
         }
-        return deleteDocumentNonBlocking(doc(firestore, collectionName, d.id));
-      });
-
-      await Promise.all(deletePromises);
+        
+        // 2. 메인 문서 삭제
+        deleteDocumentNonBlocking(doc(firestore, collectionName, d.id));
+      }
 
       toast({
-        title: `${label} 초기화 완료`,
-        description: `${querySnapshot.size}건의 데이터가 삭제되었습니다.`,
+        title: `${label} 초기화 시작`,
+        description: `총 ${querySnapshot.size}건의 데이터에 대해 삭제 명령을 전달했습니다. 잠시 후 반영됩니다.`,
       });
     } catch (error) {
       console.error("Reset error:", error);
       toast({
         variant: "destructive",
         title: "초기화 실패",
-        description: "데이터를 삭제하는 중 오류가 발생했습니다.",
+        description: "데이터를 삭제하는 중 권한 또는 네트워크 오류가 발생했습니다.",
       });
     } finally {
       setIsResetting(null);
@@ -163,7 +163,7 @@ function ResetSection({ title, description, icon, onReset, isLoading, color }: a
       
       <AlertDialog>
         <AlertDialogTrigger asChild>
-          <Button variant={isDestructive ? "destructive" : "default"} className="rounded-2xl h-12 px-6 font-black gap-2 min-w-[140px] bg-slate-900 hover:bg-slate-800 text-white border-none">
+          <Button variant={isDestructive ? "destructive" : "default"} className="rounded-2xl h-12 px-6 font-black gap-2 min-w-[140px] bg-slate-900 hover:bg-slate-800 text-white border-none shadow-xl">
             <Trash2 className="h-4 w-4" /> 내역 초기화
           </Button>
         </AlertDialogTrigger>
