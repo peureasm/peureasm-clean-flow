@@ -1,11 +1,11 @@
-
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles } from 'lucide-react';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -51,7 +51,7 @@ export default function AdminRequestDetailPage() {
     } catch (e) {
       console.error(e);
     } finally {
-      setIsResolving(null);
+      setIsResolving(false);
     }
   };
 
@@ -80,8 +80,8 @@ export default function AdminRequestDetailPage() {
         </div>
         <div className="flex gap-2">
            <Button variant="outline" className="rounded-xl" onClick={() => window.print()}>문서 출력</Button>
-           <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 gap-2" onClick={handleResolveAI}>
-             <Sparkles className="h-4 w-4" /> AI 분석
+           <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 gap-2" onClick={handleResolveAI} disabled={isResolving}>
+             <Sparkles className="h-4 w-4" /> {isResolving ? 'AI 분석 중...' : 'AI 분석'}
            </Button>
         </div>
       </div>
