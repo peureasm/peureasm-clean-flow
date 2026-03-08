@@ -5,9 +5,9 @@ import { useEffect, useState, useRef } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
-import { Hospital, Truck, Factory, ShieldCheck, LogIn, ChevronUp, ChevronDown, GripVertical, X, Sparkles } from 'lucide-react';
+import { Hospital, Truck, Factory, ShieldCheck, LogIn, GripVertical, X } from 'lucide-react';
 import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc, getDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,7 +34,7 @@ export default function RoleSelector() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 초대 링크 감지 및 자동 설정 (Invite Handler)
+  // 초대 링크 감지 및 자동 설정
   useEffect(() => {
     const inviteId = searchParams.get('inviteId');
     if (inviteId && user && firestore) {
@@ -47,7 +47,7 @@ export default function RoleSelector() {
       }).then(() => {
         toast({
           title: "초대 링크 확인됨",
-          description: "해당 병원의 담당자로 설정되었습니다.",
+          description: "해당 병원의 담당자로 연결되었습니다.",
         });
         router.replace('/hospital');
       });
@@ -61,30 +61,37 @@ export default function RoleSelector() {
     }
   }, [user, isUserLoading, auth]);
 
-  // 사용자가 로그인되었을 때 프로필 생성/업데이트 (초기 진입 시)
+  // 프로필 초기 생성 및 유지
   useEffect(() => {
-    if (user && firestore && currentPathRole) {
-      const userRef = doc(firestore, 'users', user.uid);
-      // 기존 hospitalId가 있다면 유지, 없다면 null로 설정 (하드코딩 제거)
-      setDocumentNonBlocking(userRef, {
-        id: user.uid,
-        username: user.email || `user_${user.uid.slice(0, 5)}`,
-        name: user.displayName || '테스트 사용자',
-        role: currentPathRole,
-        isActive: true,
-        updatedAt: serverTimestamp(),
-        createdAt: serverTimestamp(),
-      }, { merge: true });
-    }
+    const syncUserProfile = async () => {
+      if (user && firestore && currentPathRole) {
+        const userRef = doc(firestore, 'users', user.uid);
+        const userSnap = await getDoc(userRef);
+        
+        // 프로필이 없거나 역할이 다른 경우 업데이트
+        if (!userSnap.exists() || userSnap.data().role !== currentPathRole) {
+          setDocumentNonBlocking(userRef, {
+            id: user.uid,
+            username: user.email || `user_${user.uid.slice(0, 5)}`,
+            name: user.displayName || '테스트 사용자',
+            role: currentPathRole,
+            isActive: true,
+            updatedAt: serverTimestamp(),
+            createdAt: userSnap.exists() ? userSnap.data().createdAt : serverTimestamp(),
+          }, { merge: true });
+        }
+      }
+    };
+    syncUserProfile();
   }, [user, firestore, currentPathRole]);
 
   const handleRoleSwitch = (roleId: UserRole) => {
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userRef, {
+      updateDoc(userRef, {
         role: roleId,
         updatedAt: serverTimestamp(),
-      }, { merge: true });
+      });
     }
     router.push(`/${roleId.toLowerCase()}`);
     setIsOpen(false);
@@ -110,10 +117,7 @@ export default function RoleSelector() {
         y: Math.max(0, dragRef.current.startPosY + dy),
       });
     };
-
-    const onMouseUp = () => {
-      setIsDragging(false);
-    };
+    const onMouseUp = () => setIsDragging(false);
 
     if (isDragging) {
       window.addEventListener('mousemove', onMouseMove);
@@ -178,28 +182,6 @@ export default function RoleSelector() {
                 {currentPathRole === role.id && <div className="ml-auto h-2 w-2 rounded-full bg-white animate-pulse" />}
               </Button>
             ))}
-          </div>
-
-          <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-            <div className="flex flex-col">
-              <span className="text-[9px] font-bold text-slate-400">UID: {user?.uid.slice(0, 8)}...</span>
-              <span className={cn(
-                "text-[9px] font-black",
-                user ? "text-emerald-500" : "text-orange-500"
-              )}>
-                {user ? "AUTHENTICATED" : "NOT LOGGED IN"}
-              </span>
-            </div>
-            {!user && (
-              <Button 
-                variant="secondary" 
-                size="sm" 
-                className="rounded-xl h-8 text-[10px] font-bold bg-secondary/10 text-secondary hover:bg-secondary/20"
-                onClick={() => auth && initiateAnonymousSignIn(auth)}
-              >
-                <LogIn className="h-3 w-3 mr-1" /> 재로그인
-              </Button>
-            )}
           </div>
         </div>
       )}

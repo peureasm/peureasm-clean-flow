@@ -3,7 +3,7 @@
 
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2, Link as LinkIcon } from 'lucide-react';
+import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
@@ -32,7 +32,6 @@ export default function HospitalDashboard() {
   // 3. 해당 병원의 최근 요청 내역 조회
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !userData?.hospitalId) return null;
-    
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', '==', userData.hospitalId),
@@ -40,7 +39,7 @@ export default function HospitalDashboard() {
     );
   }, [firestore, userData?.hospitalId]);
 
-  const { data: myRequests, isLoading: isRequestsLoading, error: requestsError } = useCollection(requestsQuery);
+  const { data: myRequests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
   const stats = {
     totalThisMonth: myRequests?.length || 0,
@@ -49,26 +48,25 @@ export default function HospitalDashboard() {
 
   if (isUserLoading || isUserDocLoading || isHospLoading) {
     return (
-      <div className="p-20 text-center flex flex-col items-center gap-4">
+      <div className="p-20 text-center flex flex-col items-center gap-4 bg-slate-50 min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-bold">병원 정보를 불러오고 있습니다...</p>
+        <p className="text-muted-foreground font-bold">병원 정보를 불러오는 중...</p>
       </div>
     );
   }
 
-  // 병원이 배정되지 않은 경우 (초대 링크 미사용)
   if (!userData?.hospitalId) {
     return (
-      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-6 max-w-md mx-auto">
+      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-6 max-w-md mx-auto min-h-screen">
         <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
           <AlertCircle className="h-10 w-10" />
         </div>
         <div className="space-y-2">
-          <h2 className="text-xl font-bold text-slate-900">배정된 병원이 없습니다</h2>
-          <p className="text-sm text-muted-foreground">관리자로부터 받은 초대 링크를 통해 접속하거나, 관리자에게 문의하여 병원 배정을 요청하세요.</p>
+          <h2 className="text-xl font-bold text-slate-900">소속된 병원이 없습니다</h2>
+          <p className="text-sm text-muted-foreground">관리자가 공유한 초대 링크로 접속하거나, 관리자 페이지에서 계정을 병원에 배정해 주세요.</p>
         </div>
-        <Button asChild variant="outline" className="rounded-xl">
-          <Link href="/">홈으로 돌아가기</Link>
+        <Button asChild variant="outline" className="rounded-xl border-slate-200">
+          <Link href="/">홈으로 가기</Link>
         </Button>
       </div>
     );
@@ -83,7 +81,7 @@ export default function HospitalDashboard() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">반갑습니다, {userData?.name || '담당자'}님</h1>
-            <p className="text-sm text-muted-foreground font-medium">소속: <span className="text-primary font-bold">{hospital?.name || '정보 로딩 중...'}</span></p>
+            <p className="text-sm text-muted-foreground font-medium">소속: <span className="text-primary font-bold">{hospital?.name || '병원명 확인 불가'}</span></p>
           </div>
         </div>
       </section>
@@ -107,14 +105,14 @@ export default function HospitalDashboard() {
             </div>
             <div>
               <p className="text-2xl font-black text-slate-900">{stats.pending}건</p>
-              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">처리 중</p>
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">진행 중</p>
             </div>
           </CardContent>
         </Card>
       </div>
 
       <Link href="/hospital/new">
-        <Button className="w-full h-16 rounded-2xl text-lg font-bold flex gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform">
+        <Button className="w-full h-16 rounded-2xl text-lg font-bold flex gap-3 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] transition-transform">
           <Plus className="h-6 w-6" />
           신규 수거 요청 등록
         </Button>
@@ -122,7 +120,7 @@ export default function HospitalDashboard() {
 
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-lg font-bold text-slate-800">우리 병원 최근 내역</h2>
+          <h2 className="text-lg font-bold text-slate-800">최근 공정 내역</h2>
           <Link href="/hospital/requests" className="text-xs text-primary font-bold flex items-center bg-primary/5 px-3 py-1.5 rounded-full">
             전체보기 <ChevronRight className="h-4 w-4" />
           </Link>
@@ -130,31 +128,21 @@ export default function HospitalDashboard() {
 
         {isRequestsLoading ? (
           <div className="py-20 flex flex-col items-center gap-3">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-slate-300"></div>
+            <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
             <p className="text-xs text-muted-foreground">내역 로딩 중...</p>
           </div>
         ) : myRequests && myRequests.length > 0 ? (
           <div className="space-y-3">
             {myRequests.map((req) => (
-              <Card key={req.id} className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all group overflow-hidden bg-white">
+              <Card key={req.id} className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all group bg-white">
                 <CardContent className="p-0">
                   <Link href={`/hospital/requests/${req.id}`} className="block p-5">
                     <div className="flex justify-between items-start mb-4">
                       <div className="space-y-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-mono font-bold text-slate-400 bg-slate-50 px-2 py-0.5 rounded border border-slate-100 uppercase">
-                            ID: {req.id.slice(-6)}
-                          </span>
-                        </div>
+                        <p className="text-[10px] font-mono text-slate-400">ID: {req.id.slice(-6)}</p>
                         <p className="font-black text-slate-800">{req.requestDate} 수거 건</p>
                       </div>
                       <StatusBadge status={req.currentStatus as any} />
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                        <Package className="h-3.5 w-3.5" />
-                        <span>{req.specialNotes ? '특이사항 포함' : '일반 세탁물'}</span>
-                      </div>
                     </div>
                   </Link>
                 </CardContent>
@@ -163,13 +151,8 @@ export default function HospitalDashboard() {
           </div>
         ) : (
           <div className="py-20 text-center space-y-4 bg-white rounded-3xl border-2 border-dashed border-slate-100">
-            <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto">
-              <Package className="h-8 w-8 text-slate-200" />
-            </div>
-            <div>
-              <p className="text-slate-400 font-bold">진행 중인 수거 내역이 없습니다.</p>
-              <p className="text-[11px] text-slate-300">첫 번째 수거 요청을 등록해 보세요!</p>
-            </div>
+            <Package className="h-12 w-12 text-slate-200 mx-auto" />
+            <p className="text-slate-400 font-bold">진행 중인 요청이 없습니다.</p>
           </div>
         )}
       </section>
