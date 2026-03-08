@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
 import { Hospital, Truck, Factory, ShieldCheck, LogIn, GripVertical, X } from 'lucide-react';
 import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, updateDoc, getDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -34,34 +34,47 @@ export default function RoleSelector() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 초대 링크 감지 및 자동 설정
+  // 초대 링크 감지 및 자동 설정 (데이터 동기화 핵심 로직)
   useEffect(() => {
     const inviteId = searchParams.get('inviteId');
     const driverInvite = searchParams.get('driverInvite');
+    const claimedName = searchParams.get('name');
 
     if (user && firestore) {
       if (inviteId) {
+        // 병원 담당자 초대 처리
         const userRef = doc(firestore, 'users', user.uid);
-        updateDoc(userRef, {
+        setDoc(userRef, {
+          id: user.uid,
           role: 'HOSPITAL',
           hospitalId: inviteId,
+          name: claimedName || user.displayName || '병원 담당자',
+          username: user.email || `user_${user.uid.slice(0, 5)}`,
+          isActive: true,
           updatedAt: serverTimestamp(),
-        }).then(() => {
+          createdAt: serverTimestamp(), // 신규 유저인 경우 생성일 설정 (기존 유저는 merge에 의해 유지됨)
+        }, { merge: true }).then(() => {
           toast({
-            title: "초대 링크 확인됨",
-            description: "해당 병원의 담당자로 연결되었습니다.",
+            title: "병원 초대 확인됨",
+            description: `${claimedName || '담당자'}님, 환영합니다.`,
           });
           router.replace('/hospital');
         });
       } else if (driverInvite === 'true') {
+        // 기사 초대 처리
         const userRef = doc(firestore, 'users', user.uid);
-        updateDoc(userRef, {
+        setDoc(userRef, {
+          id: user.uid,
           role: 'DRIVER',
+          name: claimedName || user.displayName || '수거 기사',
+          username: user.email || `user_${user.uid.slice(0, 5)}`,
+          isActive: true,
           updatedAt: serverTimestamp(),
-        }).then(() => {
+          createdAt: serverTimestamp(),
+        }, { merge: true }).then(() => {
           toast({
-            title: "기사 초대 링크 확인됨",
-            description: "시스템의 수거 기사로 등록되었습니다.",
+            title: "기사 초대 확인됨",
+            description: `${claimedName || '기사'}님, 환영합니다.`,
           });
           router.replace('/driver');
         });
@@ -83,18 +96,18 @@ export default function RoleSelector() {
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         
-        // 프로필이 없거나 역할이 다른 경우 업데이트 (초대 링크 파라미터가 없을 때만 자동 전환 방지)
         const hasInviteParam = searchParams.has('inviteId') || searchParams.has('driverInvite');
         
-        if (!userSnap.exists() || (!hasInviteParam && userSnap.data().role !== currentPathRole)) {
+        // 초대 파라미터가 없고 프로필이 아직 없는 경우에만 기본 프로필 생성
+        if (!userSnap.exists() && !hasInviteParam) {
           setDocumentNonBlocking(userRef, {
             id: user.uid,
             username: user.email || `user_${user.uid.slice(0, 5)}`,
-            name: user.displayName || '테스트 사용자',
+            name: user.displayName || '사용자',
             role: currentPathRole,
             isActive: true,
             updatedAt: serverTimestamp(),
-            createdAt: userSnap.exists() ? userSnap.data().createdAt : serverTimestamp(),
+            createdAt: serverTimestamp(),
           }, { merge: true });
         }
       }
@@ -105,10 +118,10 @@ export default function RoleSelector() {
   const handleRoleSwitch = (roleId: UserRole) => {
     if (user && firestore) {
       const userRef = doc(firestore, 'users', user.uid);
-      updateDoc(userRef, {
+      setDoc(userRef, {
         role: roleId,
         updatedAt: serverTimestamp(),
-      });
+      }, { merge: true });
     }
     router.push(`/${roleId.toLowerCase()}`);
     setIsOpen(false);

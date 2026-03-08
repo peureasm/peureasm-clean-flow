@@ -13,15 +13,15 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
   const firestore = useFirestore();
   const pathname = usePathname();
 
-  // 1. 사용자 프로필 정보 조회
+  // 사용자 프로필 실시간 구독
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // 2. 사용자의 소속 병원 정보 조회
+  // 병원 정보 실시간 구독
   const hospitalRef = useMemoFirebase(() => {
     if (!firestore || !userData?.hospitalId) return null;
     return doc(firestore, 'hospitals', userData.hospitalId);
@@ -37,10 +37,12 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
           <span className="text-xl tracking-tight">MediLaundry <span className="text-secondary">Hosp</span></span>
         </Link>
         <div className="ml-auto flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-semibold">{userData?.name || '담당자'}</p>
-            <p className="text-xs text-muted-foreground">{hospital?.name || '소속 병원 확인 중'}</p>
-          </div>
+          {!isUserLoading && userData && (
+            <div className="text-right hidden sm:block animate-in fade-in duration-500">
+              <p className="text-sm font-semibold">{userData.name || '담당자'}</p>
+              <p className="text-xs text-muted-foreground">{hospital?.name || '소속 병원 정보 로드 중'}</p>
+            </div>
+          )}
           <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold shadow-inner">
             {userData?.name?.[0] || 'H'}
           </div>

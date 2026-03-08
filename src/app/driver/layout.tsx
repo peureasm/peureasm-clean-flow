@@ -2,7 +2,7 @@
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Truck, MapPin, ClipboardCheck, History, Hospital } from 'lucide-react';
+import { Truck, MapPin, History, Hospital } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -13,12 +13,13 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   const firestore = useFirestore();
   const pathname = usePathname();
 
+  // 현재 로그인한 사용자의 Firestore 프로필 실시간 구독
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading } = useDoc(userDocRef);
 
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-50 font-body">
@@ -28,10 +29,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           <span className="text-xl tracking-tight">MediLaundry <span className="text-white">Driver</span></span>
         </Link>
         <div className="ml-auto flex items-center gap-4">
-          <div className="text-right hidden sm:block">
-            <p className="text-sm font-bold text-white">{userData?.name || '기사님'}</p>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">수거 및 운송 담당</p>
-          </div>
+          {!isLoading && userData && (
+            <div className="text-right hidden sm:block animate-in fade-in duration-500">
+              <p className="text-sm font-bold text-white">{userData.name || '기사님'}</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">수거 및 운송 담당</p>
+            </div>
+          )}
           <div className="h-10 w-10 rounded-xl bg-secondary/20 flex items-center justify-center text-secondary font-black border border-secondary/30">
             {userData?.name?.[0] || 'D'}
           </div>

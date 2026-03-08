@@ -2,16 +2,15 @@
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ChevronLeft, Truck, Mail, Calendar, Hospital, 
-  ArrowRight, Share2, Copy, ShieldCheck, User, Package
+  ArrowRight, Share2, Copy, User, Package
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState, useMemo } from 'react';
@@ -50,14 +49,12 @@ export default function DriverDetailPage() {
   const { data: assignedHospitals, isLoading: isHospLoading } = useCollection(hospitalsQuery);
 
   // 기사의 담당 병원들의 최근 요청 조회
-  // assignedHospitalIds를 useMemo로 감싸서 참조 안정성을 확보합니다 (무한 루프 방지)
   const assignedHospitalIds = useMemo(() => {
     return assignedHospitals?.map(h => h.id) || [];
   }, [assignedHospitals]);
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || assignedHospitalIds.length === 0) return null;
-    // Firestore 'in' query supports up to 10 items
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', 'in', assignedHospitalIds.slice(0, 10)),
@@ -68,8 +65,9 @@ export default function DriverDetailPage() {
   const { data: requests, isLoading: isReqLoading } = useCollection(requestsQuery);
 
   const getInviteLink = () => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/driver?driverInvite=true`;
+    if (typeof window === 'undefined' || !driver) return '';
+    // 성함을 포함하여 초대 링크 생성 (RoleSelector에서 이를 인식함)
+    return `${window.location.origin}/driver?driverInvite=true&name=${encodeURIComponent(driver.name || '')}`;
   };
 
   const handleCopyLink = () => {
@@ -107,7 +105,7 @@ export default function DriverDetailPage() {
             <DialogHeader>
               <DialogTitle>기사 전용 초대 링크</DialogTitle>
               <DialogDescription>
-                이 링크로 접속한 사용자는 자동으로 '수거 기사(DRIVER)' 권한으로 등록됩니다.
+                이 링크로 접속한 사용자는 자동으로 '{driver.name}' 기사님의 권한으로 등록됩니다.
               </DialogDescription>
             </DialogHeader>
             <div className="py-4">
@@ -154,8 +152,8 @@ export default function DriverDetailPage() {
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-slate-400 mt-0.5" />
                 <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">최초 등록일</p>
-                  <p className="text-sm font-medium">{new Date(driver.createdAt).toLocaleDateString()}</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">등록일</p>
+                  <p className="text-sm font-medium">{driver.createdAt ? new Date(driver.createdAt).toLocaleDateString() : '-'}</p>
                 </div>
               </div>
             </div>

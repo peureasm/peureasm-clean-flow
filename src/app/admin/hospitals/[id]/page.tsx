@@ -59,7 +59,7 @@ export default function HospitalDetailPage() {
     );
   }, [firestore, id]);
 
-  // 전체 기사 목록 조회 (배정용) - 실제 DRIVER 역할을 가진 유저만
+  // 전체 기사 목록 조회 (배정용)
   const driversQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(
@@ -80,7 +80,6 @@ export default function HospitalDetailPage() {
     const email = formData.get('staffEmail') as string;
     const name = formData.get('staffName') as string;
     
-    // 유저 프로필 생성 (임시 계정)
     const tempUid = `hospital_staff_${Math.random().toString(36).slice(2, 9)}`;
     const userRef = doc(firestore, 'users', tempUid);
 
@@ -96,7 +95,7 @@ export default function HospitalDetailPage() {
 
     toast({
       title: "담당자 프로필 생성",
-      description: `${name} 담당자의 정보가 등록되었습니다. (초대 링크 사용 권장)`,
+      description: `${name} 담당자의 정보가 등록되었습니다.`,
     });
     setIsAddStaffOpen(false);
   };
@@ -105,7 +104,7 @@ export default function HospitalDetailPage() {
     if (!firestore || !id || !hospitalRef) return;
 
     updateDocumentNonBlocking(hospitalRef, {
-      assignedDriverId: driver.id, // 유저의 uid (Firestore 문서 ID)
+      assignedDriverId: driver.id,
       assignedDriverName: driver.name,
       updatedAt: new Date().toISOString()
     });
@@ -117,8 +116,8 @@ export default function HospitalDetailPage() {
   };
 
   const getInviteLink = () => {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}/hospital?inviteId=${id}`;
+    if (typeof window === 'undefined' || !hospital) return '';
+    return `${window.location.origin}/hospital?inviteId=${id}&name=${encodeURIComponent(hospital.name || '')}`;
   };
 
   const handleCopyLink = () => {
@@ -185,7 +184,7 @@ export default function HospitalDetailPage() {
                 <DialogHeader>
                   <DialogTitle>병원 담당자 수동 등록</DialogTitle>
                   <DialogDescription>
-                    병원 담당자의 정보를 미리 입력합니다. 실제 데이터 연동을 위해서는 초대 링크 공유를 권장합니다.
+                    병원 담당자의 정보를 미리 입력합니다. 초대 링크 공유를 통한 자동 가입을 권장합니다.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-6">
@@ -230,14 +229,14 @@ export default function HospitalDetailPage() {
                 <Truck className="h-5 w-5 text-slate-400 mt-0.5" />
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">전담 수거 기사</p>
-                  <p className="text-sm font-bold text-primary">{hospital.assignedDriverName || '미배정 (기사 배정 탭에서 선택)'}</p>
+                  <p className="text-sm font-bold text-primary">{hospital.assignedDriverName || '미배정'}</p>
                 </div>
               </div>
               <div className="flex items-start gap-3">
                 <Calendar className="h-5 w-5 text-slate-400 mt-0.5" />
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">등록일</p>
-                  <p className="text-sm font-medium">{new Date(hospital.registrationDate).toLocaleDateString()}</p>
+                  <p className="text-sm font-medium">{hospital.registrationDate ? new Date(hospital.registrationDate).toLocaleDateString() : '-'}</p>
                 </div>
               </div>
             </div>
