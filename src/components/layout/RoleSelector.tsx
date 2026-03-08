@@ -2,23 +2,26 @@
 "use client"
 
 import { useEffect, useState, useRef } from 'react';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
-import { Hospital, Truck, Factory, ShieldCheck, LogIn, ChevronUp, ChevronDown, GripVertical, X } from 'lucide-react';
+import { Hospital, Truck, Factory, ShieldCheck, LogIn, ChevronUp, ChevronDown, GripVertical, X, Sparkles } from 'lucide-react';
 import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
+import { useToast } from '@/hooks/use-toast';
 
 export default function RoleSelector() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const auth = useAuth();
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
-  const [position, setPosition] = useState({ x: 16, y: 16 }); // Bottom-left default
+  const [position, setPosition] = useState({ x: 16, y: 16 });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
 
@@ -30,6 +33,28 @@ export default function RoleSelector() {
   ];
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
+
+  // 초대 링크 감지 및 자동 설정 (Invite Handler)
+  useEffect(() => {
+    const inviteId = searchParams.get('inviteId');
+    if (inviteId && user && firestore) {
+      const userRef = doc(firestore, 'users', user.uid);
+      
+      // 사용자 역할 및 병원 ID 자동 업데이트
+      updateDoc(userRef, {
+        role: 'HOSPITAL',
+        hospitalId: inviteId,
+        updatedAt: serverTimestamp(),
+      }).then(() => {
+        toast({
+          title: "초대 링크 확인됨",
+          description: "해당 병원의 담당자로 설정되었습니다.",
+        });
+        // 쿼리 파라미터 제거하고 대시보드로 이동
+        router.replace('/hospital');
+      });
+    }
+  }, [searchParams, user, firestore]);
 
   // 자동 익명 로그인
   useEffect(() => {
@@ -68,7 +93,6 @@ export default function RoleSelector() {
     setIsOpen(false);
   };
 
-  // Dragging Logic
   const onMouseDown = (e: React.MouseEvent) => {
     setIsDragging(true);
     dragRef.current = {
@@ -83,7 +107,7 @@ export default function RoleSelector() {
     const onMouseMove = (e: MouseEvent) => {
       if (!isDragging || !dragRef.current) return;
       const dx = e.clientX - dragRef.current.startX;
-      const dy = dragRef.current.startY - e.clientY; // Inverted for bottom offset
+      const dy = dragRef.current.startY - e.clientY;
       setPosition({
         x: Math.max(0, dragRef.current.startPosX + dx),
         y: Math.max(0, dragRef.current.startPosY + dy),

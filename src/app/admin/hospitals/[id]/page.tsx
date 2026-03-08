@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from '@/components/shared/StatusBadge';
 import { 
   ChevronLeft, Hospital, MapPin, Phone, User as UserIcon, 
-  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Mail, Truck, Check
+  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Mail, Truck, Check, Share2, Copy
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -30,12 +30,15 @@ export default function HospitalDetailPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   // 병원 마스터 정보 조회
   const hospitalRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
     return doc(firestore, 'hospitals', id as string);
   }, [firestore, id]);
+
+  const { data: hospital, isLoading: isHospLoading } = useDoc(hospitalRef);
 
   // 해당 병원의 요청 내역 조회
   const requestsQuery = useMemoFirebase(() => {
@@ -65,7 +68,6 @@ export default function HospitalDetailPage() {
     );
   }, [firestore]);
 
-  const { data: hospital, isLoading: isHospLoading } = useDoc(hospitalRef);
   const { data: requests, isLoading: isReqLoading } = useCollection(requestsQuery);
   const { data: staff, isLoading: isStaffLoading } = useCollection(staffQuery);
   const { data: drivers, isLoading: isDriversLoading } = useCollection(driversQuery);
@@ -109,6 +111,21 @@ export default function HospitalDetailPage() {
     });
   };
 
+  const getInviteLink = () => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}/hospital?inviteId=${id}`;
+  };
+
+  const handleCopyLink = () => {
+    const link = getInviteLink();
+    navigator.clipboard.writeText(link);
+    toast({
+      title: "링크 복사 완료",
+      description: "병원 담당자에게 전달할 초대 링크가 복사되었습니다.",
+    });
+    setIsShareOpen(false);
+  };
+
   if (isHospLoading) return <div className="p-12 text-center text-slate-400 font-bold">병원 정보를 불러오는 중...</div>;
   if (!hospital) return <div className="p-12 text-center text-slate-400 font-bold">병원 정보를 찾을 수 없습니다.</div>;
 
@@ -125,10 +142,44 @@ export default function HospitalDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+          <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="rounded-xl gap-2 border-primary text-primary hover:bg-primary/5">
+                <Share2 className="h-4 w-4" /> 접속 링크 공유
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="rounded-2xl">
+              <DialogHeader>
+                <DialogTitle>병원 담당자 초대 링크</DialogTitle>
+                <DialogDescription>
+                  이 링크를 담당자에게 전달하면, 해당 담당자는 즉시 {hospital.name} 시스템에 접근할 수 있게 됩니다.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="py-4">
+                <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+                  <Input 
+                    value={getInviteLink()} 
+                    readOnly 
+                    className="bg-transparent border-none text-xs text-slate-500 focus-visible:ring-0 h-auto p-0" 
+                  />
+                  <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" onClick={handleCopyLink}>
+                    <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+                <p className="text-[10px] text-slate-400 italic font-medium">
+                  * 링크를 통해 접속한 사용자는 자동으로 병원 담당자 권한을 부여받습니다.
+                </p>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCopyLink} className="w-full rounded-xl h-12 font-bold">초대 링크 복사하기</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
             <DialogTrigger asChild>
               <Button className="rounded-xl gap-2 bg-primary">
-                <UserPlus className="h-4 w-4" /> 담당자 추가
+                <UserPlus className="h-4 w-4" /> 담당자 직접 추가
               </Button>
             </DialogTrigger>
             <DialogContent className="rounded-2xl">
@@ -136,7 +187,7 @@ export default function HospitalDetailPage() {
                 <DialogHeader>
                   <DialogTitle>병원 담당자 등록</DialogTitle>
                   <DialogDescription>
-                    {hospital.name} 소속으로 활동할 담당자 정보를 입력하세요.
+                    {hospital.name} 소속으로 활동할 담당자 정보를 직접 입력하세요.
                   </DialogDescription>
                 </DialogHeader>
                 <div className="grid gap-4 py-6">

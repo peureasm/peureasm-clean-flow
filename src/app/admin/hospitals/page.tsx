@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2, BarChart3, Truck } from 'lucide-react';
+import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2, BarChart3, Truck, Share2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { 
   Dialog, 
@@ -94,6 +94,16 @@ export default function AdminHospitalsPage() {
       .finally(() => {
         setIsSubmitting(false);
       });
+  };
+
+  const handleQuickShare = (hosp: any) => {
+    if (typeof window === 'undefined') return;
+    const inviteLink = `${window.location.origin}/hospital?inviteId=${hosp.id}`;
+    navigator.clipboard.writeText(inviteLink);
+    toast({
+      title: "초대 링크 복사됨",
+      description: `${hosp.name} 담당자 전용 링크가 복사되었습니다.`,
+    });
   };
 
   return (
@@ -189,13 +199,14 @@ export default function AdminHospitalsPage() {
                   <div className="p-3 bg-primary/5 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
                     <HospitalIcon className="h-6 w-6" />
                   </div>
-                  <span className={`text-[10px] font-black px-2.5 py-1 rounded-full border ${
-                    hosp.assignedDriverId 
-                      ? 'bg-primary text-white border-transparent' 
-                      : 'bg-slate-50 text-slate-400 border-slate-100'
-                  }`}>
-                    {hosp.assignedDriverName ? `담당: ${hosp.assignedDriverName}` : '기사 미배정'}
-                  </span>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="rounded-full h-8 w-8 text-slate-300 hover:text-primary"
+                    onClick={() => handleQuickShare(hosp)}
+                  >
+                    <Share2 className="h-4 w-4" />
+                  </Button>
                 </div>
                 <CardTitle className="text-xl font-black mt-4 text-slate-900 line-clamp-1">{hosp.name}</CardTitle>
               </CardHeader>
