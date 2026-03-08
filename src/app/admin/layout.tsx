@@ -7,6 +7,7 @@ import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarCha
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { usePathname } from 'next/navigation';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { user } = useUser();
@@ -55,87 +56,74 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 }
 
 function AdminSidebar() {
+  const pathname = usePathname();
+
+  const menuItems = [
+    { href: '/admin', icon: LayoutDashboard, label: '대시보드' },
+    { href: '/admin/hospitals', icon: Hospital, label: '병원 관리' },
+    { href: '/admin/drivers', icon: Truck, label: '기사 관리' },
+    { href: '/admin/requests', icon: ClipboardList, label: '전체 요청 내역' },
+    { href: '/admin/discrepancies', icon: AlertCircle, label: '차이 발생 모니터링', alert: true },
+    { href: '/admin/delivery', icon: Package, label: '납품/출고 관리' },
+    { href: '/admin/settlements', icon: CreditCard, label: '정산 관리' },
+    { href: '/admin/stats', icon: BarChart3, label: '통계 리포트' },
+  ];
+
   return (
     <Sidebar className="border-r border-white/10 bg-slate-900 text-white">
       <SidebarHeader className="h-16 flex items-center px-6 border-b border-white/10">
         <Link href="/admin" className="flex items-center gap-2 font-bold text-accent">
           <LayoutDashboard className="h-6 w-6" />
-          <span className="text-xl tracking-tight text-white">MediLaundry</span>
+          <span className="text-xl tracking-tight text-white font-black">MediLaundry</span>
         </Link>
       </SidebarHeader>
       <SidebarContent className="p-4">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="대시보드">
-              <Link href="/admin">
-                <LayoutDashboard /> <span>대시보드</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="병원 관리">
-              <Link href="/admin/hospitals">
-                <Hospital /> <span>병원 관리</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="기사 관리">
-              <Link href="/admin/drivers">
-                <Truck /> <span>기사 관리</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="전체 요청">
-              <Link href="/admin/requests">
-                <ClipboardList /> <span>전체 요청 내역</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="차이 발생 큐">
-              <Link href="/admin/discrepancies">
-                <AlertCircle className="text-orange-400" /> <span>차이 발생 모니터링</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="납품 관리">
-              <Link href="/admin/delivery">
-                <Package /> <span>납품/출고 관리</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="정산">
-              <Link href="/admin/settlements">
-                <CreditCard /> <span>정산 관리</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="통계">
-              <Link href="/admin/stats">
-                <BarChart3 /> <span>통계 리포트</span>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
+        <SidebarMenu className="gap-1">
+          {menuItems.map((item) => {
+            const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
+            return (
+              <SidebarMenuItem key={item.href}>
+                <SidebarMenuButton 
+                  asChild 
+                  isActive={isActive}
+                  className={`
+                    h-12 rounded-xl transition-all duration-200
+                    hover:bg-white/10 hover:text-white
+                    data-[active=true]:bg-accent data-[active=true]:text-slate-900 data-[active=true]:shadow-lg data-[active=true]:shadow-accent/20
+                  `}
+                  tooltip={item.label}
+                >
+                  <Link href={item.href}>
+                    <item.icon className={`${item.alert && !isActive ? 'text-orange-400' : ''}`} /> 
+                    <span className="font-bold">{item.label}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
 
         <div className="mt-auto pt-8 border-t border-white/10">
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="hover:bg-white/5 h-12" tooltip="설정">
+              <SidebarMenuButton 
+                asChild 
+                className="hover:bg-white/10 h-12 rounded-xl text-slate-400 hover:text-white" 
+                tooltip="설정"
+              >
                 <Link href="/admin/settings">
-                  <Settings /> <span>시스템 설정</span>
+                  <Settings /> <span className="font-bold">시스템 설정</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
-              <SidebarMenuButton asChild className="hover:bg-destructive/10 text-destructive h-12" tooltip="로그아웃">
+              <SidebarMenuButton 
+                asChild 
+                className="hover:bg-destructive/20 text-destructive/80 hover:text-destructive h-12 rounded-xl" 
+                tooltip="로그아웃"
+              >
                 <Link href="/">
-                  <LogOut /> <span>로그아웃</span>
+                  <LogOut /> <span className="font-bold">로그아웃</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
