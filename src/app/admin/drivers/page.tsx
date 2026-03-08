@@ -2,7 +2,7 @@
 "use client"
 
 import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, limit, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -13,12 +13,30 @@ import {
   Dialog, DialogContent, DialogDescription, DialogFooter, 
   DialogHeader, DialogTitle, DialogTrigger 
 } from '@/components/ui/dialog';
-import { Search, Plus, Truck, User, Mail, Loader2, Hospital, ChevronRight, Share2, Copy } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Search, Plus, Truck, User, Mail, Loader2, Hospital, ChevronRight, Share2, Copy, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
 export default function AdminDriversPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingDriver, setEditingDriver] = useState<any>(null);
+  const [deletingDriver, setDeletingDriver] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const firestore = useFirestore();
@@ -54,7 +72,17 @@ export default function AdminDriversPage() {
     });
   };
 
-  const handleAddDriver = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleOpenAdd = () => {
+    setEditingDriver(null);
+    setIsDialogOpen(true);
+  };
+
+  const handleOpenEdit = (driver: any) => {
+    setEditingDriver(driver);
+    setIsDialogOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!firestore) return;
 
@@ -63,26 +91,37 @@ export default function AdminDriversPage() {
     const name = formData.get('name') as string;
     const email = formData.get('email') as string;
     
-    // 수동 등록 시 임시 ID 부여 (실제 로그인은 초대 링크 권장)
-    const tempUid = `driver_${Math.random().toString(36).slice(2, 9)}`;
-    const userRef = doc(firestore, 'users', tempUid);
+    if (editingDriver) {
+      updateDocumentNonBlocking(doc(firestore, 'users', editingDriver.id), {
+        name,
+        username: email,
+        updatedAt: new Date().toISOString()
+      });
+      toast({ title: "기사 정보 수정", description: `${name} 기사님의 정보가 수정되었습니다.` });
+    } else {
+      const tempUid = `driver_${Math.random().toString(36).slice(2, 9)}`;
+      const userRef = doc(firestore, 'users', tempUid);
+      setDocumentNonBlocking(userRef, {
+        id: tempUid,
+        name: name,
+        username: email,
+        role: 'DRIVER',
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+      toast({ title: "임시 기사 계정 생성", description: `${name} 기사님의 프로필이 생성되었습니다.` });
+    }
 
-    setDocumentNonBlocking(userRef, {
-      id: tempUid,
-      name: name,
-      username: email,
-      role: 'DRIVER',
-      isActive: true,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }, { merge: true });
-
-    toast({
-      title: "임시 기사 계정 생성",
-      description: `${name} 기사님의 프로필이 생성되었습니다. (실제 접속 시 초대 링크 사용 권장)`,
-    });
-    setIsDialogOpen(false);
     setIsSubmitting(false);
+    setIsDialogOpen(false);
+  };
+
+  const handleDelete = () => {
+    if (!firestore || !deletingDriver) return;
+    deleteDocumentNonBlocking(doc(firestore, 'users', deletingDriver.id));
+    toast({ title: "기사 프로필 삭제", description: "기사 정보가 시스템에서 제거되었습니다." });
+    setDeletingDriver(null);
   };
 
   const getAssignedHospitalCount = (driverId: string) => {
@@ -102,46 +141,16 @@ export default function AdminDriversPage() {
             <Share2 className="h-4 w-4" /> 공용 초대 링크 복사
           </Button>
           
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="flex-1 md:flex-none rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20 bg-primary">
-                <Plus className="h-5 w-5" /> 기사 수동 등록
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] rounded-2xl">
-              <form onSubmit={handleAddDriver}>
-                <DialogHeader>
-                  <DialogTitle className="text-xl font-bold">기사 프로필 생성</DialogTitle>
-                  <DialogDescription className="text-xs">
-                    기사님의 정보를 미리 등록합니다. 실제 시스템 사용을 위해서는 초대 링크를 통한 로그인이 필요합니다.
-                  </DialogDescription>
-                </DialogHeader>
-                <div className="grid gap-4 py-6">
-                  <div className="space-y-2">
-                    <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-400">성함</Label>
-                    <Input id="name" name="name" placeholder="예: 이민수" className="rounded-xl" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="email" className="text-xs font-bold uppercase text-slate-400">아이디 (이메일)</Label>
-                    <Input id="email" name="email" type="email" placeholder="driver@example.com" className="rounded-xl" required />
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button type="submit" className="w-full rounded-xl h-12 font-bold" disabled={isSubmitting}>
-                    {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Truck className="h-4 w-4 mr-2" />}
-                    기사 프로필 생성
-                  </Button>
-                </DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button onClick={handleOpenAdd} className="flex-1 md:flex-none rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20 bg-primary">
+            <Plus className="h-5 w-5" /> 기사 수동 등록
+          </Button>
         </div>
       </div>
 
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input 
-          className="pl-10 rounded-xl bg-white border-none shadow-sm h-12" 
+        <input 
+          className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
           placeholder="기사명 또는 이메일로 검색..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -164,7 +173,24 @@ export default function AdminDriversPage() {
                     <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
                       <Truck className="h-6 w-6" />
                     </div>
-                    <Badge variant="outline" className="text-[10px] font-bold border-emerald-100 bg-emerald-50 text-emerald-600">ACTIVE</Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className="text-[10px] font-bold border-emerald-100 bg-emerald-50 text-emerald-600">ACTIVE</Badge>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                          <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(driver)}>
+                            <Pencil className="h-4 w-4" /> 수정
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => setDeletingDriver(driver)}>
+                            <Trash2 className="h-4 w-4" /> 삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
                   <CardTitle className="text-xl font-black mt-4 text-slate-900">{driver.name}</CardTitle>
                   <p className="text-[10px] font-mono text-slate-400 uppercase">ID: {driver.id}</p>
@@ -199,6 +225,52 @@ export default function AdminDriversPage() {
           <p className="text-xs text-slate-300 mt-2">초대 링크를 기사님에게 공유하여 첫 기사를 등록하세요.</p>
         </div>
       )}
+
+      {/* Driver Form Dialog */}
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+          <form onSubmit={handleSubmit}>
+            <DialogHeader>
+              <DialogTitle className="text-xl font-bold">{editingDriver ? "기사 정보 수정" : "기사 프로필 생성"}</DialogTitle>
+              <DialogDescription className="text-xs">
+                기사님의 정보를 입력합니다. 실제 시스템 사용을 위해서는 초대 링크를 통한 로그인이 필요합니다.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-6">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-400">성함</Label>
+                <Input id="name" name="name" defaultValue={editingDriver?.name || ""} placeholder="예: 이민수" className="rounded-xl" required />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-xs font-bold uppercase text-slate-400">아이디 (이메일)</Label>
+                <Input id="email" name="email" type="email" defaultValue={editingDriver?.username || ""} placeholder="driver@example.com" className="rounded-xl" required />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="submit" className="w-full rounded-xl h-12 font-bold" disabled={isSubmitting}>
+                {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : editingDriver ? <Pencil className="h-4 w-4 mr-2" /> : <Truck className="h-4 w-4 mr-2" />}
+                {editingDriver ? "정보 저장하기" : "기사 프로필 생성"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Alert Dialog */}
+      <AlertDialog open={!!deletingDriver} onOpenChange={(open) => !open && setDeletingDriver(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-bold">정말 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription>
+              [{deletingDriver?.name}] 기사의 모든 정보를 삭제합니다. 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">기사 삭제</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
