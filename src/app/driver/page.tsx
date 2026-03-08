@@ -1,14 +1,13 @@
-
 "use client"
 
 import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, Truck, PackageCheck, Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, PackageCheck, Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import Link from 'next/link';
-import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, where, limit, setDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, limit, doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function DriverDashboard() {
@@ -44,33 +43,28 @@ export default function DriverDashboard() {
 
   const { data: allRequests, isLoading: isReqLoading } = useCollection(collectionQuery);
 
-  const handleLinkTestDriver = async () => {
+  const handleLinkTestDriver = () => {
     if (!firestore || !user) return;
     setIsLinking(true);
-    try {
-      // 내 프로필을 DRIVER로 업데이트
-      await setDoc(doc(firestore, 'users', user.uid), {
-        role: 'DRIVER',
-        name: user.displayName || '테스트 기사님',
-        isActive: true,
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+    
+    // 내 프로필을 DRIVER로 업데이트
+    setDocumentNonBlocking(doc(firestore, 'users', user.uid), {
+      role: 'DRIVER',
+      name: user.displayName || '테스트 기사님',
+      isActive: true,
+      updatedAt: serverTimestamp()
+    }, { merge: true });
 
-      // 테스트 병원의 담당 기사를 내 UID로 교체
-      const testHospRef = doc(firestore, 'hospitals', 'test-hosp-id');
-      await updateDoc(testHospRef, {
-        assignedDriverId: user.uid,
-        assignedDriverName: user.displayName || '테스트 기사님',
-        updatedAt: serverTimestamp()
-      });
+    // 테스트 병원의 담당 기사를 내 UID로 교체
+    const testHospRef = doc(firestore, 'hospitals', 'test-hosp-id');
+    updateDocumentNonBlocking(testHospRef, {
+      assignedDriverId: user.uid,
+      assignedDriverName: user.displayName || '테스트 기사님',
+      updatedAt: serverTimestamp()
+    });
 
-      toast({ title: "테스트 기사 연결 완료", description: "이제 배정된 테스트 병원의 수거를 시작할 수 있습니다." });
-    } catch (e) {
-      console.error(e);
-      toast({ variant: "destructive", title: "연결 실패", description: "먼저 관리자 설정에서 데모 환경을 구축해 주세요." });
-    } finally {
-      setIsLinking(false);
-    }
+    toast({ title: "테스트 기사 연결", description: "테스트 병원 배정 요청이 전달되었습니다." });
+    setIsLinking(false);
   };
 
   const collectionList = allRequests?.filter(r => r.currentStatus === '제출') || [];
@@ -79,7 +73,7 @@ export default function DriverDashboard() {
   if (isUserLoading || isHospLoading) return (
     <div className="p-12 text-center text-slate-400 font-bold bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4">
       <Loader2 className="h-10 w-10 animate-spin text-secondary" />
-      <p className="text-slate-200">배정된 운송 정보를 확인 중입니다...</p>
+      <p className="text-slate-200 font-black">배정 정보를 확인 중입니다...</p>
     </div>
   );
 
@@ -92,8 +86,8 @@ export default function DriverDashboard() {
             내 거점: <span className="text-secondary">{assignedHospitals?.length || 0}개 병원 배정됨</span>
           </p>
         </div>
-        <Button variant="ghost" size="sm" asChild className="text-secondary font-bold text-xs">
-          <Link href="/driver/hospitals">거점 정보 관리 <ChevronRight className="h-3 w-3" /></Link>
+        <Button variant="ghost" size="sm" asChild className="text-secondary font-bold text-xs hover:bg-secondary/10">
+          <Link href="/driver/hospitals">거점 관리 <ChevronRight className="h-3 w-3" /></Link>
         </Button>
       </section>
 
@@ -103,9 +97,9 @@ export default function DriverDashboard() {
             <AlertCircle className="h-16 w-16 text-orange-500 mx-auto" />
             <div className="space-y-2">
               <p className="text-slate-200 font-black text-2xl">배정된 병원 없음</p>
-              <p className="text-sm text-slate-400 leading-relaxed">
+              <p className="text-sm text-slate-400 leading-relaxed font-medium">
                 현재 수거를 담당할 거점 병원이 지정되지 않았습니다.<br/>
-                원활한 테스트를 위해 <span className="text-secondary font-bold">테스트 전담 기사</span>로 활동해 보세요.
+                테스트를 위해 <span className="text-secondary font-bold">테스트 전담 기사</span>로 시작해 보세요.
               </p>
             </div>
           </div>
@@ -118,7 +112,7 @@ export default function DriverDashboard() {
               {isLinking ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6" />}
               테스트 기사로 즉시 시작
             </Button>
-            <p className="text-[10px] text-slate-500 italic">클릭 시 '서울 메디컬 테스트 병원'의 담당자로 지정됩니다.</p>
+            <p className="text-[10px] text-slate-500 italic font-bold">클릭 시 '서울 메디컬 테스트 병원'의 담당자로 배정됩니다.</p>
           </div>
         </div>
       ) : (
@@ -130,7 +124,7 @@ export default function DriverDashboard() {
             </h2>
 
             {isReqLoading ? (
-              <div className="p-12 text-center text-slate-500 italic">데이터 로딩 중...</div>
+              <div className="p-12 text-center text-slate-500 font-bold italic">데이터 로딩 중...</div>
             ) : collectionList.length > 0 ? (
               <div className="space-y-4">
                 {collectionList.map((req) => (
@@ -140,7 +134,7 @@ export default function DriverDashboard() {
                         <div className="flex justify-between items-start">
                           <div className="space-y-1">
                             <h3 className="text-2xl font-black text-white">{req.hospitalName}</h3>
-                            <div className="flex items-center gap-1.5 text-xs text-slate-400 font-medium">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-400 font-bold">
                               <MapPin className="h-4 w-4 text-secondary" />
                               <span>현장 수거 위치 확인</span>
                             </div>
@@ -165,7 +159,7 @@ export default function DriverDashboard() {
                             </div>
                             <div>
                               <p className="text-sm font-black text-white">현장 수량 대조 시작</p>
-                              <p className="text-xs text-slate-400 font-medium">병원 입력값 vs 실제 수거량</p>
+                              <p className="text-xs text-slate-400 font-bold">병원 입력값 vs 실제 수거량</p>
                             </div>
                           </div>
                           <ChevronRight className="h-6 w-6 text-slate-500 group-hover:text-white" />
@@ -176,7 +170,7 @@ export default function DriverDashboard() {
                 ))}
               </div>
             ) : (
-              <div className="p-12 text-center text-slate-500 bg-slate-800/30 rounded-3xl border border-dashed border-white/5">
+              <div className="p-12 text-center text-slate-500 bg-slate-800/30 rounded-3xl border border-dashed border-white/5 font-bold">
                 수거 대기 중인 요청이 없습니다.
               </div>
             )}
@@ -204,7 +198,7 @@ export default function DriverDashboard() {
                 </Link>
               ))}
               {deliveryList.length === 0 && (
-                <div className="p-8 text-center text-slate-600 text-xs italic">배송 예정 건이 없습니다.</div>
+                <div className="p-8 text-center text-slate-600 text-xs italic font-bold">배송 예정 건이 없습니다.</div>
               )}
             </div>
           </section>

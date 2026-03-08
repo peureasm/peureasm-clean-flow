@@ -1,10 +1,9 @@
-
 "use client"
 
 import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Hospital as HospitalIcon, Plus, Search, MapPin, Phone, User, Loader2, BarChart3, Truck, Share2, MoreVertical, Pencil, Trash2 } from 'lucide-react';
+import { Hospital as HospitalIcon, Plus, Search, MapPin, Truck, Share2, MoreVertical, Pencil, Trash2, Loader2 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { 
   Dialog, 
@@ -12,8 +11,7 @@ import {
   DialogDescription, 
   DialogFooter, 
   DialogHeader, 
-  DialogTitle, 
-  DialogTrigger 
+  DialogTitle 
 } from '@/components/ui/dialog';
 import {
   DropdownMenu,
@@ -62,13 +60,11 @@ export default function AdminHospitalsPage() {
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, "");
     let formattedValue = value;
-    
     if (value.length > 3 && value.length <= 7) {
       formattedValue = `${value.slice(0, 3)}-${value.slice(3)}`;
     } else if (value.length > 7) {
       formattedValue = `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7, 11)}`;
     }
-    
     setPhoneValue(formattedValue);
   };
 
@@ -79,7 +75,6 @@ export default function AdminHospitalsPage() {
   };
 
   const handleOpenEdit = (hosp: any) => {
-    // Dropdown이 닫힐 시간을 주기 위해 지연 처리
     setTimeout(() => {
       setEditingHospital(hosp);
       setPhoneValue(hosp.contactPersonPhone || "");
@@ -88,13 +83,12 @@ export default function AdminHospitalsPage() {
   };
 
   const handleOpenDelete = (hosp: any) => {
-    // Dropdown이 닫힐 시간을 주기 위해 지연 처리
     setTimeout(() => {
       setDeletingHospital(hosp);
     }, 100);
   };
 
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!firestore) return;
 
@@ -111,17 +105,16 @@ export default function AdminHospitalsPage() {
 
     if (editingHospital) {
       updateDocumentNonBlocking(doc(firestore, 'hospitals', editingHospital.id), hospitalData);
-      toast({ title: "정보 수정 완료", description: "병원 정보가 업데이트되었습니다." });
+      toast({ title: "정보 수정", description: "병원 정보가 업데이트 대기열에 추가되었습니다." });
     } else {
       const newHospital = {
         ...hospitalData,
         registrationDate: new Date().toISOString(),
-        status: 'Active',
         assignedDriverId: null,
         assignedDriverName: null
       };
-      await addDocumentNonBlocking(collection(firestore, 'hospitals'), newHospital);
-      toast({ title: "병원 등록 완료", description: "신규 병원이 등록되었습니다." });
+      addDocumentNonBlocking(collection(firestore, 'hospitals'), newHospital);
+      toast({ title: "병원 등록", description: "신규 병원 정보가 시스템에 추가되었습니다." });
     }
 
     setIsSubmitting(false);
@@ -131,7 +124,7 @@ export default function AdminHospitalsPage() {
   const handleDelete = () => {
     if (!firestore || !deletingHospital) return;
     deleteDocumentNonBlocking(doc(firestore, 'hospitals', deletingHospital.id));
-    toast({ title: "병원 삭제 완료", description: "병원이 시스템에서 제거되었습니다." });
+    toast({ title: "병원 삭제", description: "병원 정보 삭제 명령이 전달되었습니다." });
     setDeletingHospital(null);
   };
 
@@ -152,7 +145,6 @@ export default function AdminHospitalsPage() {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">병원 관리</h1>
           <p className="text-muted-foreground font-medium text-sm">시스템을 이용 중인 병원 고객사를 조회하고 관리합니다.</p>
         </div>
-        
         <Button onClick={handleOpenAdd} className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20">
           <Plus className="h-5 w-5" /> 신규 병원 등록
         </Button>
@@ -161,7 +153,7 @@ export default function AdminHospitalsPage() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
         <input 
-          className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
+          className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium" 
           placeholder="병원명 또는 주소로 검색..." 
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
@@ -237,7 +229,6 @@ export default function AdminHospitalsPage() {
         </div>
       )}
 
-      {/* Hospital Form Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="sm:max-w-[425px] rounded-2xl">
           <form onSubmit={handleSubmit}>
@@ -250,16 +241,16 @@ export default function AdminHospitalsPage() {
             <div className="grid gap-4 py-6">
               <div className="space-y-2">
                 <Label htmlFor="name" className="text-xs font-bold uppercase text-slate-400">병원명</Label>
-                <Input id="name" name="name" defaultValue={editingHospital?.name || ""} placeholder="예: 서울메디컬병원" className="rounded-xl" required />
+                <Input id="name" name="name" defaultValue={editingHospital?.name || ""} placeholder="예: 서울메디컬병원" className="rounded-xl font-bold" required />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="address" className="text-xs font-bold uppercase text-slate-400">주소</Label>
-                <Input id="address" name="address" defaultValue={editingHospital?.address || ""} placeholder="예: 서울시 강남구..." className="rounded-xl" required />
+                <Input id="address" name="address" defaultValue={editingHospital?.address || ""} placeholder="예: 서울시 강남구..." className="rounded-xl font-bold" required />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="contactPersonName" className="text-xs font-bold uppercase text-slate-400">담당자 성함</Label>
-                  <Input id="contactPersonName" name="contactPersonName" defaultValue={editingHospital?.contactPersonName || ""} placeholder="김철수" className="rounded-xl" required />
+                  <Input id="contactPersonName" name="contactPersonName" defaultValue={editingHospital?.contactPersonName || ""} placeholder="김철수" className="rounded-xl font-bold" required />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="contactPersonPhone" className="text-xs font-bold uppercase text-slate-400">연락처</Label>
@@ -267,7 +258,7 @@ export default function AdminHospitalsPage() {
                     id="contactPersonPhone" 
                     name="contactPersonPhone" 
                     placeholder="010-0000-0000" 
-                    className="rounded-xl" 
+                    className="rounded-xl font-bold" 
                     value={phoneValue}
                     onChange={handlePhoneChange}
                     maxLength={13}
@@ -286,7 +277,6 @@ export default function AdminHospitalsPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Delete Alert Dialog */}
       <AlertDialog open={!!deletingHospital} onOpenChange={(open) => !open && setDeletingHospital(null)}>
         <AlertDialogContent className="rounded-2xl">
           <AlertDialogHeader>
@@ -296,7 +286,7 @@ export default function AdminHospitalsPage() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="rounded-xl">취소</AlertDialogCancel>
+            <AlertDialogCancel className="rounded-xl font-bold">취소</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete} className="bg-destructive text-white hover:bg-destructive/90 rounded-xl font-bold">병원 삭제</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

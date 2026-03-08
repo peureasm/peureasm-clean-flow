@@ -1,12 +1,11 @@
-
 "use client"
 
 import { useState } from 'react';
-import { useFirestore, deleteDocumentNonBlocking, useUser } from '@/firebase';
-import { collection, getDocs, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useFirestore, deleteDocumentNonBlocking, useUser, setDocumentNonBlocking } from '@/firebase';
+import { collection, getDocs, doc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertTriangle, Trash2, Database, ShieldAlert, CheckCircle2, Loader2, Hospital, Truck, Sparkles } from 'lucide-react';
+import { Trash2, Database, ShieldAlert, Loader2, Hospital, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -26,49 +25,42 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState<string | null>(null);
 
-  // 데모 데이터 구축 함수
-  const setupDemo = async () => {
+  const setupDemo = () => {
     if (!firestore || !user) return;
     setIsResetting('demo');
 
-    try {
-      const hospId = "test-hosp-id";
-      const driverId = "test-driver-id";
+    const hospId = "test-hosp-id";
+    const driverId = "test-driver-id";
 
-      // 1. 테스트 병원 생성
-      await setDoc(doc(firestore, 'hospitals', hospId), {
-        id: hospId,
-        name: "서울 메디컬 테스트 병원",
-        address: "서울시 강남구 테헤란로 123",
-        contactPersonName: "테스트 담당자",
-        contactPersonPhone: "010-1234-5678",
-        registrationDate: new Date().toISOString(),
-        assignedDriverId: driverId,
-        assignedDriverName: "테스트 기사",
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+    // 1. 테스트 병원 생성
+    setDocumentNonBlocking(doc(firestore, 'hospitals', hospId), {
+      id: hospId,
+      name: "서울 메디컬 테스트 병원",
+      address: "서울시 강남구 테헤란로 123",
+      contactPersonName: "테스트 담당자",
+      contactPersonPhone: "010-1234-5678",
+      registrationDate: new Date().toISOString(),
+      assignedDriverId: driverId,
+      assignedDriverName: "테스트 기사",
+      updatedAt: serverTimestamp()
+    }, { merge: true });
 
-      // 2. 테스트 기사 프로필 생성
-      await setDoc(doc(firestore, 'users', driverId), {
-        id: driverId,
-        name: "테스트 기사",
-        username: "test-driver@medilaundry.com",
-        role: "DRIVER",
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: serverTimestamp()
-      }, { merge: true });
+    // 2. 테스트 기사 프로필 생성
+    setDocumentNonBlocking(doc(firestore, 'users', driverId), {
+      id: driverId,
+      name: "테스트 기사",
+      username: "test-driver@medilaundry.com",
+      role: "DRIVER",
+      isActive: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: serverTimestamp()
+    }, { merge: true });
 
-      toast({
-        title: "테스트 환경 구축 완료",
-        description: "테스트 병원과 기사가 생성되었습니다. 이제 각 역할 화면에서 퀵 연결이 가능합니다.",
-      });
-    } catch (error) {
-      console.error("Demo setup error:", error);
-      toast({ variant: "destructive", title: "구축 실패", description: "데모 데이터를 생성하는 중 오류가 발생했습니다." });
-    } finally {
-      setIsResetting(null);
-    }
+    toast({
+      title: "테스트 환경 구축 시작",
+      description: "테스트 데이터가 생성 대기열에 추가되었습니다.",
+    });
+    setIsResetting(null);
   };
 
   const clearCollection = async (collectionName: string, label: string) => {
@@ -77,18 +69,19 @@ export default function AdminSettingsPage() {
 
     try {
       const querySnapshot = await getDocs(collection(firestore, collectionName));
-      for (const d of querySnapshot.docs) {
+      querySnapshot.docs.forEach(d => {
         if (collectionName === 'collectionRequests') {
-          const itemsSnapshot = await getDocs(collection(firestore, `collectionRequests/${d.id}/items`));
-          itemsSnapshot.docs.forEach(itemDoc => {
-            deleteDocumentNonBlocking(doc(firestore, `collectionRequests/${d.id}/items`, itemDoc.id));
+          getDocs(collection(firestore, `collectionRequests/${d.id}/items`)).then(itemsSnapshot => {
+            itemsSnapshot.docs.forEach(itemDoc => {
+              deleteDocumentNonBlocking(doc(firestore, `collectionRequests/${d.id}/items`, itemDoc.id));
+            });
           });
         }
         deleteDocumentNonBlocking(doc(firestore, collectionName, d.id));
-      }
+      });
       toast({ title: `${label} 초기화 시작`, description: "데이터 삭제 명령을 전달했습니다." });
     } catch (error) {
-      toast({ variant: "destructive", title: "초기화 실패", description: "삭제 중 오류가 발생했습니다." });
+      toast({ variant: "destructive", title: "초기화 실패", description: "삭제 작업 중 오류가 발생했습니다." });
     } finally {
       setIsResetting(null);
     }
@@ -117,11 +110,11 @@ export default function AdminSettingsPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-3xl bg-blue-50 border border-blue-100">
             <div className="space-y-1">
               <h3 className="font-black text-lg text-blue-900">데모 환경 원클릭 구축</h3>
-              <p className="text-sm text-blue-700/80">테스트 병원(강남) 및 전담 기사 프로필을 자동으로 구성합니다.</p>
+              <p className="text-sm text-blue-700/80">테스트 병원 및 전담 기사 프로필을 자동으로 구성합니다.</p>
             </div>
             <Button 
               onClick={setupDemo} 
-              disabled={isResetting === 'demo'}
+              disabled={!!isResetting}
               className="rounded-2xl h-14 px-8 font-black gap-2 bg-primary hover:bg-primary/90 text-white shadow-xl shadow-primary/20"
             >
               {isResetting === 'demo' ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
@@ -191,7 +184,7 @@ function ResetSection({ title, description, icon, onReset, isLoading, color }: a
         <AlertDialogContent className="rounded-3xl">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-xl font-black">정말 삭제하시겠습니까?</AlertDialogTitle>
-            <AlertDialogDescription>이 작업은 취소할 수 없습니다.</AlertDialogDescription>
+            <AlertDialogDescription>이 작업은 취소할 수 없으며 복구가 불가능합니다.</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl font-bold">취소</AlertDialogCancel>

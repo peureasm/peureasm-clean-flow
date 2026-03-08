@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from 'react';
@@ -7,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2, Sparkles } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, limit, doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function HospitalDashboard() {
@@ -17,7 +16,6 @@ export default function HospitalDashboard() {
   const { toast } = useToast();
   const [isLinking, setIsLinking] = useState(false);
 
-  // 1. 사용자 프로필 조회
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -25,7 +23,6 @@ export default function HospitalDashboard() {
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 2. 사용자의 소속 병원 정보 조회
   const hospitalRef = useMemoFirebase(() => {
     if (!firestore || !userData?.hospitalId) return null;
     return doc(firestore, 'hospitals', userData.hospitalId);
@@ -33,7 +30,6 @@ export default function HospitalDashboard() {
 
   const { data: hospital, isLoading: isHospLoading } = useDoc(hospitalRef);
 
-  // 3. 해당 병원의 최근 요청 내역 조회
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !userData?.hospitalId) return null;
     return query(
@@ -45,23 +41,19 @@ export default function HospitalDashboard() {
 
   const { data: myRequests, isLoading: isRequestsLoading } = useCollection(requestsQuery);
 
-  const handleLinkTestHospital = async () => {
+  const handleLinkTestHospital = () => {
     if (!firestore || !user) return;
     setIsLinking(true);
-    try {
-      await setDoc(doc(firestore, 'users', user.uid), {
-        hospitalId: 'test-hosp-id',
-        role: 'HOSPITAL',
-        name: user.displayName || '테스트 담당자',
-        updatedAt: serverTimestamp()
-      }, { merge: true });
-      
-      toast({ title: "테스트 병원 연결 완료", description: "이제 테스트 병원의 관리자로 활동합니다." });
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setIsLinking(false);
-    }
+    
+    setDocumentNonBlocking(doc(firestore, 'users', user.uid), {
+      hospitalId: 'test-hosp-id',
+      role: 'HOSPITAL',
+      name: user.displayName || '테스트 담당자',
+      updatedAt: serverTimestamp()
+    }, { merge: true });
+    
+    toast({ title: "테스트 병원 연결", description: "테스트 계정 전환 요청이 전달되었습니다." });
+    setIsLinking(false);
   };
 
   const stats = {
@@ -73,20 +65,20 @@ export default function HospitalDashboard() {
     return (
       <div className="p-20 text-center flex flex-col items-center gap-4 bg-slate-50 min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-bold">병원 정보를 불러오는 중...</p>
+        <p className="text-muted-foreground font-bold">병원 정보를 동기화 중...</p>
       </div>
     );
   }
 
   if (!userData?.hospitalId) {
     return (
-      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-8 max-w-md mx-auto min-h-screen">
-        <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center text-orange-500">
+      <div className="p-8 sm:p-20 text-center flex flex-col items-center gap-8 max-w-md mx-auto min-h-screen bg-slate-50">
+        <div className="h-20 w-20 bg-orange-50 rounded-full flex items-center justify-center text-orange-500 border border-orange-100">
           <AlertCircle className="h-10 w-10" />
         </div>
         <div className="space-y-3">
           <h2 className="text-2xl font-black text-slate-900">소속된 병원이 없습니다</h2>
-          <p className="text-sm text-muted-foreground leading-relaxed">
+          <p className="text-sm text-muted-foreground leading-relaxed font-medium">
             관리자가 배정한 병원 정보가 없습니다.<br/>
             빠른 테스트를 위해 아래 버튼을 클릭하여 <span className="font-bold text-primary">테스트 병원</span>에 접속해 보세요.
           </p>
@@ -95,16 +87,16 @@ export default function HospitalDashboard() {
           <Button 
             onClick={handleLinkTestHospital} 
             disabled={isLinking}
-            className="w-full h-16 rounded-2xl bg-primary text-white font-black text-lg gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-transform"
+            className="w-full h-16 rounded-2xl bg-primary text-white font-black text-lg gap-3 shadow-xl shadow-primary/20 hover:scale-[1.02] transition-all"
           >
             {isLinking ? <Loader2 className="h-6 w-6 animate-spin" /> : <Sparkles className="h-6 w-6 text-accent" />}
             테스트 병원으로 즉시 시작
           </Button>
-          <Button asChild variant="ghost" className="w-full text-slate-400 font-bold">
-            <Link href="/">홈으로 가기</Link>
+          <Button asChild variant="ghost" className="w-full text-slate-400 font-bold hover:bg-slate-100">
+            <Link href="/">랜딩 페이지로 가기</Link>
           </Button>
         </div>
-        <p className="text-[11px] text-slate-400 italic">* 관리자 화면의 '시스템 설정'에서 데모 환경을 먼저 구축해야 합니다.</p>
+        <p className="text-[11px] text-slate-400 italic font-bold">* 관리자 화면의 '시스템 설정'에서 데모 환경을 먼저 구축해야 합니다.</p>
       </div>
     );
   }
@@ -114,11 +106,11 @@ export default function HospitalDashboard() {
       <section className="space-y-2">
         <div className="flex items-center gap-4">
           <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center text-white text-2xl font-black shadow-lg shadow-primary/20">
-            {userData?.name?.[0] || '김'}
+            {userData?.name?.[0] || 'H'}
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight text-slate-900">반갑습니다, {userData?.name || '담당자'}님</h1>
-            <p className="text-sm text-muted-foreground font-medium">소속: <span className="text-primary font-bold">{hospital?.name || '병원명 확인 불가'}</span></p>
+            <p className="text-sm text-muted-foreground font-bold">소속: <span className="text-primary">{hospital?.name || '병원명 확인 불가'}</span></p>
           </div>
         </div>
       </section>
@@ -149,7 +141,7 @@ export default function HospitalDashboard() {
       </div>
 
       <Link href="/hospital/new">
-        <Button className="w-full h-16 rounded-2xl text-lg font-bold flex gap-3 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] transition-transform">
+        <Button className="w-full h-16 rounded-2xl text-lg font-black flex gap-3 shadow-xl shadow-primary/20 bg-primary hover:scale-[1.02] transition-all">
           <Plus className="h-6 w-6" />
           신규 수거 요청 등록
         </Button>
@@ -158,7 +150,7 @@ export default function HospitalDashboard() {
       <section className="space-y-4">
         <div className="flex items-center justify-between px-1">
           <h2 className="text-lg font-bold text-slate-800">최근 공정 내역</h2>
-          <Link href="/hospital/requests" className="text-xs text-primary font-bold flex items-center bg-primary/5 px-3 py-1.5 rounded-full">
+          <Link href="/hospital/requests" className="text-xs text-primary font-black flex items-center bg-primary/5 px-3 py-1.5 rounded-full hover:bg-primary/10 transition-colors">
             전체보기 <ChevronRight className="h-4 w-4" />
           </Link>
         </div>
@@ -166,7 +158,7 @@ export default function HospitalDashboard() {
         {isRequestsLoading ? (
           <div className="py-20 flex flex-col items-center gap-3">
             <Loader2 className="h-6 w-6 animate-spin text-slate-300" />
-            <p className="text-xs text-muted-foreground">내역 로딩 중...</p>
+            <p className="text-xs text-muted-foreground font-bold">내역 로딩 중...</p>
           </div>
         ) : myRequests && myRequests.length > 0 ? (
           <div className="space-y-3">
@@ -176,7 +168,7 @@ export default function HospitalDashboard() {
                   <Link href={`/hospital/requests/${req.id}`} className="block p-5">
                     <div className="flex justify-between items-start mb-4">
                       <div className="space-y-1">
-                        <p className="text-[10px] font-mono text-slate-400">ID: {req.id.slice(-6)}</p>
+                        <p className="text-[10px] font-mono font-bold text-slate-400">ID: {req.id.slice(-6).toUpperCase()}</p>
                         <p className="font-black text-slate-800">{req.requestDate} 수거 건</p>
                       </div>
                       <StatusBadge status={req.currentStatus as any} />
@@ -189,7 +181,7 @@ export default function HospitalDashboard() {
         ) : (
           <div className="py-20 text-center space-y-4 bg-white rounded-3xl border-2 border-dashed border-slate-100">
             <Package className="h-12 w-12 text-slate-200 mx-auto" />
-            <p className="text-slate-400 font-bold">진행 중인 요청이 없습니다.</p>
+            <p className="text-slate-400 font-black">진행 중인 요청이 없습니다.</p>
           </div>
         )}
       </section>
