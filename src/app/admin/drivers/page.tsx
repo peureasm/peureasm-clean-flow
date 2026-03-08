@@ -78,8 +78,18 @@ export default function AdminDriversPage() {
   };
 
   const handleOpenEdit = (driver: any) => {
-    setEditingDriver(driver);
-    setIsDialogOpen(true);
+    // Dropdown이 닫힐 시간을 주기 위해 지연 처리 (Radix UI 포인터 이벤트 버그 방지)
+    setTimeout(() => {
+      setEditingDriver(driver);
+      setIsDialogOpen(true);
+    }, 100);
+  };
+
+  const handleOpenDelete = (driver: any) => {
+    // Dropdown이 닫힐 시간을 주기 위해 지연 처리
+    setTimeout(() => {
+      setDeletingDriver(driver);
+    }, 100);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -185,7 +195,7 @@ export default function AdminDriversPage() {
                           <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(driver)}>
                             <Pencil className="h-4 w-4" /> 수정
                           </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => setDeletingDriver(driver)}>
+                          <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(driver)}>
                             <Trash2 className="h-4 w-4" /> 삭제
                           </DropdownMenuItem>
                         </DropdownMenuContent>

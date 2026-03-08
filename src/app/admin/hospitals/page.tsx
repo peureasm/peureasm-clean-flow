@@ -79,9 +79,19 @@ export default function AdminHospitalsPage() {
   };
 
   const handleOpenEdit = (hosp: any) => {
-    setEditingHospital(hosp);
-    setPhoneValue(hosp.contactPersonPhone || "");
-    setIsDialogOpen(true);
+    // Dropdown이 닫힐 시간을 주기 위해 지연 처리
+    setTimeout(() => {
+      setEditingHospital(hosp);
+      setPhoneValue(hosp.contactPersonPhone || "");
+      setIsDialogOpen(true);
+    }, 100);
+  };
+
+  const handleOpenDelete = (hosp: any) => {
+    // Dropdown이 닫힐 시간을 주기 위해 지연 처리
+    setTimeout(() => {
+      setDeletingHospital(hosp);
+    }, 100);
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -191,7 +201,7 @@ export default function AdminHospitalsPage() {
                         <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(hosp)}>
                           <Pencil className="h-4 w-4" /> 수정
                         </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => setDeletingHospital(hosp)}>
+                        <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(hosp)}>
                           <Trash2 className="h-4 w-4" /> 삭제
                         </DropdownMenuItem>
                       </DropdownMenuContent>
