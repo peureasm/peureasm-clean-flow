@@ -27,25 +27,28 @@ export default function DriverHistoryPage() {
   }, [firestore, user]);
 
   const { data: hospitals, isLoading: isHospLoading } = useCollection(assignedHospitalsQuery);
-  const assignedHospitalIds = hospitals?.map(h => h.id) || [];
+  
+  const assignedHospitalIds = useMemoFirebase(() => {
+    return hospitals?.map(h => h.id) || [];
+  }, [hospitals]);
 
-  // 2. 전체 요청 조회
+  // 2. 배정된 병원들의 요청 내역 조회
   const requestsQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // 최신순으로 정렬하여 100건까지 조회
+    if (!firestore || !user || assignedHospitalIds.length === 0) return null;
     return query(
       collection(firestore, 'collectionRequests'),
-      limit(100)
+      where('hospitalId', 'in', assignedHospitalIds.slice(0, 30)),
+      limit(200)
     );
-  }, [firestore, user]);
+  }, [firestore, user, assignedHospitalIds]);
 
   const { data: allRequests, isLoading: isReqLoading } = useCollection(requestsQuery);
 
-  // 본인 담당 병원의 요청만 필터링 및 검색어 적용
+  // 검색어 적용 및 정렬
   const myHistory = allRequests?.filter(r => 
-    assignedHospitalIds.includes(r.hospitalId) &&
-    (r.hospitalName.toLowerCase().includes(searchTerm.toLowerCase()) || r.requestDate.includes(searchTerm))
-  ) || [];
+    r.hospitalName.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    r.requestDate.includes(searchTerm)
+  ).sort((a, b) => b.requestDate.localeCompare(a.requestDate)) || [];
 
   // 상태에 따른 분류
   const ongoingStatuses = ['수거완료', '공장입고', '세탁중', '건조중', '포장완료', '출고'];
@@ -117,7 +120,6 @@ export default function DriverHistoryPage() {
 }
 
 function HistoryItem({ req }: { req: any }) {
-  // 상태에 따른 상세 페이지 경로 결정
   const detailPath = (req.currentStatus === '출고' || req.currentStatus === '납품완료' || req.currentStatus === '병원확인완료' || req.currentStatus === '종결') 
     ? `/driver/delivery/${req.id}` 
     : `/driver/collection/${req.id}`;

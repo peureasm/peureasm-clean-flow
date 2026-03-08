@@ -25,26 +25,28 @@ export default function DriverDashboard() {
   const { data: assignedHospitals, isLoading: isHospLoading } = useCollection(assignedHospitalsQuery);
   
   // 병원 ID들을 추출하여 요청 쿼리에 사용
-  const assignedHospitalIds = assignedHospitals?.map(h => h.id) || [];
+  const assignedHospitalIds = useMemoFirebase(() => {
+    return assignedHospitals?.map(h => h.id) || [];
+  }, [assignedHospitals]);
 
-  // 2. 수거/납품 대기 중인 전체 요청 조회 (클라이언트 필터링 병행)
+  // 2. 수거/납품 대기 중인 요청 조회 (배정된 병원 ID 리스트 기반)
   const collectionQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    // 상태가 '제출'(수거전) 또는 '출고'(납품전)인 것만 1차 조회
+    if (!firestore || !user || assignedHospitalIds.length === 0) return null;
+    
+    // Firestore 'in' 쿼리는 최대 30개까지 지원합니다.
+    // 배정된 병원 ID들을 기준으로 필터링하여 기사 전용 데이터를 가져옵니다.
     return query(
       collection(firestore, 'collectionRequests'),
-      where('currentStatus', 'in', ['제출', '출고']),
-      limit(50)
+      where('hospitalId', 'in', assignedHospitalIds.slice(0, 30)),
+      limit(100)
     );
-  }, [firestore, user]);
+  }, [firestore, user, assignedHospitalIds]);
 
   const { data: allRequests, isLoading: isReqLoading } = useCollection(collectionQuery);
 
-  // 본인 담당 병원의 요청만 최종 필터링
-  const myRequests = allRequests?.filter(r => assignedHospitalIds.includes(r.hospitalId)) || [];
-  
-  const collectionList = myRequests.filter(r => r.currentStatus === '제출');
-  const deliveryList = myRequests.filter(r => r.currentStatus === '출고');
+  // 상태 필터링 (제출=수거전, 출고=납품전)
+  const collectionList = allRequests?.filter(r => r.currentStatus === '제출') || [];
+  const deliveryList = allRequests?.filter(r => r.currentStatus === '출고') || [];
 
   if (isUserLoading || isHospLoading) return (
     <div className="p-12 text-center text-slate-400 font-bold bg-slate-900 min-h-screen flex flex-col items-center justify-center gap-4">
