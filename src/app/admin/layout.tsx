@@ -1,30 +1,47 @@
 
+"use client"
+
 import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
 import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, CreditCard, LogOut, Package, Truck } from 'lucide-react';
 import Link from 'next/link';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData } = useDoc(userDocRef);
+
   return (
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset className="bg-[#F2F5F8]">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-6">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-6 shadow-sm">
           <div className="flex-1">
             <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Admin Control Center</h2>
           </div>
           <div className="flex items-center gap-4">
             <div className="relative">
+              <div className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full animate-ping"></div>
               <div className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full"></div>
               <AlertCircle className="h-5 w-5 text-slate-400" />
             </div>
             <div className="h-8 w-px bg-slate-200"></div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-bold">관리자(Master)</p>
-                <p className="text-[10px] text-muted-foreground">최고권한</p>
+                <p className="text-sm font-bold">{userData?.name || '관리자'}</p>
+                <p className="text-[10px] text-muted-foreground font-black uppercase">최고권한 (Master)</p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white font-bold">A</div>
+              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white font-black shadow-lg shadow-primary/20">
+                {userData?.name?.[0] || 'A'}
+              </div>
             </div>
           </div>
         </header>
