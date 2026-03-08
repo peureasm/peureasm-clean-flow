@@ -4,7 +4,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, Truck, PackageCheck, Loader2 } from 'lucide-react';
+import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, Truck, PackageCheck, Loader2, Hospital } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
@@ -52,9 +52,14 @@ export default function DriverDashboard() {
 
   return (
     <div className="p-4 space-y-6">
-      <section className="space-y-2 py-4">
-        <h1 className="text-2xl font-black text-white">오늘의 운송 경로</h1>
-        <p className="text-slate-300 text-sm font-medium">나에게 배정된 병원: <span className="text-secondary font-bold">{assignedHospitals?.length || 0}개</span></p>
+      <section className="flex justify-between items-end py-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-black text-white">오늘의 운송 경로</h1>
+          <p className="text-slate-300 text-sm font-medium">나에게 배정된 병원: <span className="text-secondary font-bold">{assignedHospitals?.length || 0}개</span></p>
+        </div>
+        <Button variant="ghost" size="sm" asChild className="text-secondary font-bold text-xs">
+          <Link href="/driver/hospitals">병원 관리 <ChevronRight className="h-3 w-3" /></Link>
+        </Button>
       </section>
 
       <div className="space-y-4">

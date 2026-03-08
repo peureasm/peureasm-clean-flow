@@ -1,15 +1,16 @@
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Truck, MapPin, ClipboardCheck, History } from 'lucide-react';
+import { Truck, MapPin, ClipboardCheck, History, Hospital } from 'lucide-react';
+import Link from 'next/link';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-[#0F172A] text-slate-50 font-body">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b border-white/10 bg-slate-900 px-4 sm:px-6 shadow-xl">
-        <div className="flex items-center gap-2 font-bold text-secondary">
+        <Link href="/driver" className="flex items-center gap-2 font-bold text-secondary">
           <Truck className="h-6 w-6" />
           <span className="text-xl tracking-tight">MediLaundry <span className="text-white">Driver</span></span>
-        </div>
+        </Link>
         <div className="ml-auto flex items-center gap-4">
           <div className="text-right hidden sm:block">
             <p className="text-sm font-bold text-white">이민수 기사님</p>
@@ -24,7 +25,8 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
       
       {/* Driver Mobile Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-16 items-center justify-around border-t border-white/10 bg-slate-900/95 backdrop-blur-lg px-2 sm:hidden">
-        <NavItem href="/driver" icon={MapPin} label="오늘의경로" active />
+        <NavItem href="/driver" icon={MapPin} label="오늘의경로" />
+        <NavItem href="/driver/hospitals" icon={Hospital} label="내 병원" />
         <NavItem href="/driver/history" icon={History} label="수거이력" />
       </nav>
       
@@ -33,11 +35,11 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
   );
 }
 
-function NavItem({ href, icon: Icon, label, active = false }: any) {
+function NavItem({ href, icon: Icon, label }: { href: string; icon: any; label: string }) {
   return (
-    <a href={href} className={`flex flex-col items-center gap-1 p-2 transition-colors ${active ? 'text-secondary' : 'text-slate-400 hover:text-white'}`}>
+    <Link href={href} className="flex flex-col items-center gap-1 p-2 transition-colors text-slate-400 hover:text-white">
       <Icon className="h-5 w-5" />
       <span className="text-[10px] font-bold">{label}</span>
-    </a>
+    </Link>
   );
 }
