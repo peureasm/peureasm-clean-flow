@@ -7,9 +7,10 @@ import { Badge } from '@/components/ui/badge';
 import { LaundryStatus } from '../lib/types';
 import { useFirestore, useCollection, updateDocumentNonBlocking, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
-import { Package, ArrowRight, Kanban, ListFilter } from 'lucide-react';
+import { Package, ArrowRight, Kanban, ListFilter, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 export default function FactoryKanban() {
   const firestore = useFirestore();
@@ -34,6 +35,13 @@ export default function FactoryKanban() {
 
   const { data: requests, isLoading } = useCollection(factoryQuery);
 
+  // 별도로 '수거완료' (입고 대기) 건수 확인
+  const inboundPendingQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'collectionRequests'), where('currentStatus', '==', '수거완료'));
+  }, [firestore, user]);
+  const { data: pendingRequests } = useCollection(inboundPendingQuery);
+
   const handleStatusChange = (requestId: string, nextStatus: LaundryStatus) => {
     if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'collectionRequests', requestId), {
@@ -56,14 +64,22 @@ export default function FactoryKanban() {
             <Kanban className="h-5 w-5 text-purple-600" />
             <h1 className="text-2xl font-bold text-slate-900">공정 관리 칸반</h1>
           </div>
-          <p className="text-muted-foreground text-sm">입고된 세탁물의 실시간 공정 상태를 추적하고 관리합니다.</p>
+          <p className="text-muted-foreground text-sm">입고 검수가 완료된 세탁물의 실시간 공정 상태를 관리합니다.</p>
         </div>
+        
         <div className="flex gap-2">
+          {pendingRequests && pendingRequests.length > 0 && (
+            <Button variant="outline" className="rounded-xl gap-2 h-11 border-purple-200 bg-purple-50 text-purple-700 animate-pulse" asChild>
+              <Link href="/factory/inbound">
+                <AlertCircle className="h-4 w-4" /> 입고 대기 {pendingRequests.length}건 있음
+              </Link>
+            </Button>
+          )}
           <Button variant="outline" className="rounded-xl gap-2 h-11 border-slate-200">
             <ListFilter className="h-4 w-4" /> 필터링
           </Button>
-          <Button className="bg-purple-700 rounded-xl px-6 h-11 shadow-lg shadow-purple-200">
-            신규 입고 등록
+          <Button className="bg-purple-700 rounded-xl px-6 h-11 shadow-lg shadow-purple-200" asChild>
+            <Link href="/factory/inbound">신규 입고 검수</Link>
           </Button>
         </div>
       </div>

@@ -72,8 +72,9 @@ export default function AdminRequestDetailPage() {
         "품목명": item.itemName,
         "병원 요청 수량": item.requestedQuantity || 0,
         "기사 확인 수량": item.verifiedQuantity ?? "-",
+        "공장 입고 수량": item.inboundQuantity ?? "-",
         "최종 납품 수량": item.deliveredQuantity ?? "-",
-        "수량 차이(병원-기사)": item.verifiedQuantity !== undefined ? (item.verifiedQuantity - item.requestedQuantity) : "-"
+        "수량 차이(병원-공장)": item.inboundQuantity !== undefined ? (item.inboundQuantity - item.requestedQuantity) : "-"
       }));
 
       const worksheet = XLSX.utils.json_to_sheet(excelData);
@@ -109,7 +110,7 @@ export default function AdminRequestDetailPage() {
   if (!request) return <div className="p-20 text-center font-bold">요청 정보를 찾을 수 없습니다.</div>;
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full">
@@ -173,15 +174,16 @@ export default function AdminRequestDetailPage() {
 
           <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
             <CardHeader className="border-b pb-4">
-               <CardTitle className="text-lg font-bold">품목별 수량 대조</CardTitle>
+               <CardTitle className="text-lg font-bold">단계별 수량 통합 대조 (수량 추적)</CardTitle>
             </CardHeader>
-            <CardContent className="p-0">
+            <CardContent className="p-0 overflow-hidden">
                <Table>
                  <TableHeader className="bg-slate-50/50">
                     <TableRow>
                       <TableHead className="font-bold">품목명</TableHead>
                       <TableHead className="text-center font-bold">병원 요청</TableHead>
                       <TableHead className="text-center font-bold text-primary">기사 확인</TableHead>
+                      <TableHead className="text-center font-bold text-purple-600">공장 입고</TableHead>
                       <TableHead className="text-center font-bold text-indigo-600">최종 납품</TableHead>
                     </TableRow>
                  </TableHeader>
@@ -190,8 +192,9 @@ export default function AdminRequestDetailPage() {
                      <TableRow key={item.id}>
                        <TableCell className="font-bold">{item.itemName}</TableCell>
                        <TableCell className="text-center">{item.requestedQuantity}</TableCell>
-                       <TableCell className="text-center font-black text-primary bg-primary/5">{item.verifiedQuantity ?? '-'}</TableCell>
-                       <TableCell className="text-center font-black text-indigo-600 bg-indigo-50">{item.deliveredQuantity ?? '-'}</TableCell>
+                       <TableCell className="text-center font-bold text-primary bg-primary/5">{item.verifiedQuantity ?? '-'}</TableCell>
+                       <TableCell className="text-center font-bold text-purple-600 bg-purple-50">{item.inboundQuantity ?? '-'}</TableCell>
+                       <TableCell className="text-center font-bold text-indigo-600 bg-indigo-50">{item.deliveredQuantity ?? '-'}</TableCell>
                      </TableRow>
                    ))}
                  </TableBody>
@@ -214,6 +217,15 @@ export default function AdminRequestDetailPage() {
                       <p className="text-[10px] text-muted-foreground">{new Date(request.updatedAt || request.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
+                  {request.inboundAt && (
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-purple-500 border-2 border-white"></div>
+                      <div>
+                        <p className="text-xs font-bold text-purple-600">공장 입고 검수 완료</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(request.inboundAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  )}
                   <div className="relative opacity-50">
                     <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-slate-300 border-2 border-white"></div>
                     <div>
