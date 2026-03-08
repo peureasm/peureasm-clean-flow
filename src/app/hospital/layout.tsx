@@ -1,7 +1,7 @@
 
 import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Hospital, LayoutDashboard, ClipboardList, PlusCircle, CheckCircle } from 'lucide-react';
+import { Hospital, LayoutDashboard, ClipboardList, PlusCircle, CheckCircle, Settings } from 'lucide-react';
 
 export default function HospitalLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -28,7 +28,7 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
         <NavItem href="/hospital" icon={LayoutDashboard} label="홈" />
         <NavItem href="/hospital/requests" icon={ClipboardList} label="내역" />
         <NavItem href="/hospital/new" icon={PlusCircle} label="요청" active />
-        <NavItem href="/hospital/confirm" icon={CheckCircle} label="확인" />
+        <NavItem href="/hospital/settings" icon={Settings} label="정보관리" />
       </nav>
       
       <RoleSelector />
