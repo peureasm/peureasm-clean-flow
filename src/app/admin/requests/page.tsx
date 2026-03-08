@@ -22,8 +22,6 @@ export default function AdminRequestsPage() {
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // 최신순으로 정렬하려면 createdAt 필드에 색인이 필요할 수 있습니다.
-    // 여기서는 단순 쿼리를 사용합니다.
     return query(collection(firestore, 'collectionRequests'), limit(100));
   }, [firestore]);
 
@@ -46,7 +44,6 @@ export default function AdminRequestsPage() {
     }
 
     try {
-      // 엑셀에 들어갈 데이터 가공
       const excelData = filteredRequests.map(req => ({
         "요청 ID": req.id,
         "병원명": req.hospitalName,
@@ -57,12 +54,10 @@ export default function AdminRequestsPage() {
         "최종업데이트": new Date(req.updatedAt || req.createdAt).toLocaleString(),
       }));
 
-      // 워크북 생성
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "수거내역");
 
-      // 파일 다운로드
       const fileName = filterDate 
         ? `MediLaundry_수거내역_${filterDate}.xlsx` 
         : `MediLaundry_전체수거내역_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -92,7 +87,7 @@ export default function AdminRequestsPage() {
         </div>
         <Button 
           onClick={handleExportExcel} 
-          className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-12 px-6 shadow-lg shadow-emerald-500/20"
+          className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-12 px-6 shadow-lg shadow-emerald-500/20 font-bold border-none transition-all active:scale-95"
         >
           <FileSpreadsheet className="h-5 w-5" /> 엑셀 다운로드
         </Button>

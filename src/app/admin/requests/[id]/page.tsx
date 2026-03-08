@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
@@ -67,7 +68,6 @@ export default function AdminRequestDetailPage() {
     }
 
     try {
-      // 엑셀 데이터 가공
       const excelData = items.map(item => ({
         "품목명": item.itemName,
         "병원 요청 수량": item.requestedQuantity || 0,
@@ -76,12 +76,10 @@ export default function AdminRequestDetailPage() {
         "수량 차이(병원-기사)": item.verifiedQuantity !== undefined ? (item.verifiedQuantity - item.requestedQuantity) : "-"
       }));
 
-      // 워크북 생성
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "품목상세");
 
-      // 파일 다운로드
       const fileName = `MediLaundry_상세내역_${request.hospitalName}_${request.requestDate}.xlsx`;
       XLSX.writeFile(workbook, fileName);
 
@@ -123,11 +121,14 @@ export default function AdminRequestDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-           <Button variant="outline" className="rounded-xl gap-2" onClick={handleExportExcel}>
-             <FileSpreadsheet className="h-4 w-4 text-emerald-600" /> 엑셀 다운로드
+           <Button 
+             onClick={handleExportExcel} 
+             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 px-4 shadow-md shadow-emerald-500/20 font-bold border-none transition-all active:scale-95 text-xs"
+           >
+             <FileSpreadsheet className="h-4 w-4" /> 엑셀 다운로드
            </Button>
-           <Button variant="outline" className="rounded-xl" onClick={() => window.print()}>문서 출력</Button>
-           <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 gap-2" onClick={handleResolveAI} disabled={isResolving}>
+           <Button variant="outline" className="rounded-xl h-10 text-xs font-bold" onClick={() => window.print()}>문서 출력</Button>
+           <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 gap-2 h-10 text-xs font-bold shadow-md shadow-orange-500/20" onClick={handleResolveAI} disabled={isResolving}>
              <Sparkles className="h-4 w-4" /> {isResolving ? 'AI 분석 중...' : 'AI 분석'}
            </Button>
         </div>
