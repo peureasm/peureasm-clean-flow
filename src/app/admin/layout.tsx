@@ -1,4 +1,3 @@
-
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
@@ -23,30 +22,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <SidebarProvider>
       <AdminSidebar />
-      <SidebarInset className="bg-[#F2F5F8]">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-6 shadow-sm">
+      <SidebarInset className="bg-background">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-8 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
           <div className="flex-1">
-            <h2 className="text-sm font-bold text-muted-foreground uppercase tracking-widest">Admin Control Center</h2>
+            <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">MediLaundry Management System</h2>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full animate-ping"></div>
-              <div className="absolute -top-1 -right-1 h-2 w-2 bg-destructive rounded-full"></div>
-              <AlertCircle className="h-5 w-5 text-slate-400" />
+          <div className="flex items-center gap-6">
+            <div className="relative cursor-pointer hover:opacity-70 transition-opacity">
+              <div className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-chart-3 rounded-full border-2 border-white"></div>
+              <AlertCircle className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="h-8 w-px bg-slate-200"></div>
+            <div className="h-6 w-px bg-border"></div>
             <div className="flex items-center gap-3">
               <div className="text-right">
-                <p className="text-sm font-bold">{userData?.name || '관리자'}</p>
-                <p className="text-[10px] text-muted-foreground font-black uppercase">최고권한 (Master)</p>
+                <p className="text-sm font-bold text-foreground">{userData?.name || '관리자'}</p>
+                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Super Admin</p>
               </div>
-              <div className="h-9 w-9 rounded-xl bg-primary flex items-center justify-center text-white font-black shadow-lg shadow-primary/20">
+              <div className="h-10 w-10 rounded-btn bg-primary flex items-center justify-center text-white font-black shadow-lg shadow-primary/20">
                 {userData?.name?.[0] || 'A'}
               </div>
             </div>
           </div>
         </header>
-        <div className="p-8">
+        <div className="p-8 max-w-[1600px] mx-auto w-full">
           {children}
         </div>
       </SidebarInset>
@@ -64,21 +62,21 @@ function AdminSidebar() {
     { href: '/admin/drivers', icon: Truck, label: '기사 관리' },
     { href: '/admin/requests', icon: ClipboardList, label: '전체 요청 내역' },
     { href: '/admin/discrepancies', icon: AlertCircle, label: '차이 발생 모니터링', alert: true },
-    { href: '/admin/delivery', icon: Package, label: '납품/출고 관리' },
-    { href: '/admin/settlements', icon: CreditCard, label: '정산 관리' },
     { href: '/admin/stats', icon: BarChart3, label: '통계 리포트' },
   ];
 
   return (
-    <Sidebar className="border-r border-white/10 bg-slate-900 text-white">
-      <SidebarHeader className="h-16 flex items-center px-6 border-b border-white/10">
-        <Link href="/admin" className="flex items-center gap-2 font-bold text-accent">
-          <LayoutDashboard className="h-6 w-6" />
-          <span className="text-xl tracking-tight text-white font-black">MediLaundry</span>
+    <Sidebar className="border-r border-border bg-white">
+      <SidebarHeader className="h-16 flex items-center px-6 border-b border-border">
+        <Link href="/admin" className="flex items-center gap-3 font-black text-primary">
+          <div className="p-1.5 bg-primary rounded-lg">
+            <Package className="h-5 w-5 text-white" />
+          </div>
+          <span className="text-xl tracking-tighter">MediLaundry</span>
         </Link>
       </SidebarHeader>
-      <SidebarContent className="p-4">
-        <SidebarMenu className="gap-1">
+      <SidebarContent className="p-4 bg-white">
+        <SidebarMenu className="gap-1.5">
           {menuItems.map((item) => {
             const isActive = pathname === item.href || (item.href !== '/admin' && pathname.startsWith(item.href));
             return (
@@ -87,14 +85,14 @@ function AdminSidebar() {
                   asChild 
                   isActive={isActive}
                   className={`
-                    h-12 rounded-xl transition-all duration-200
-                    hover:bg-white/10 hover:text-white
-                    data-[active=true]:bg-accent data-[active=true]:text-slate-900 data-[active=true]:shadow-lg data-[active=true]:shadow-accent/20
+                    h-12 rounded-btn transition-all duration-200 px-4
+                    hover:bg-accent hover:text-primary
+                    data-[active=true]:bg-primary data-[active=true]:text-white data-[active=true]:shadow-md data-[active=true]:shadow-primary/20
                   `}
                   tooltip={item.label}
                 >
                   <Link href={item.href}>
-                    <item.icon className={`${item.alert && !isActive ? 'text-orange-400' : ''}`} /> 
+                    <item.icon className={`h-5 w-5 ${item.alert && !isActive ? 'text-chart-3' : ''}`} /> 
                     <span className="font-bold">{item.label}</span>
                   </Link>
                 </SidebarMenuButton>
@@ -103,27 +101,27 @@ function AdminSidebar() {
           })}
         </SidebarMenu>
 
-        <div className="mt-auto pt-8 border-t border-white/10">
+        <div className="mt-auto pt-8 border-t border-border">
           <SidebarMenu>
             <SidebarMenuItem>
               <SidebarMenuButton 
                 asChild 
-                className="hover:bg-white/10 h-12 rounded-xl text-slate-400 hover:text-white" 
+                className="hover:bg-accent h-12 rounded-btn text-muted-foreground hover:text-primary px-4" 
                 tooltip="설정"
               >
                 <Link href="/admin/settings">
-                  <Settings /> <span className="font-bold">시스템 설정</span>
+                  <Settings className="h-5 w-5" /> <span className="font-bold">시스템 설정</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton 
                 asChild 
-                className="hover:bg-destructive/20 text-destructive/80 hover:text-destructive h-12 rounded-xl" 
+                className="hover:bg-destructive/10 text-destructive/80 hover:text-destructive h-12 rounded-btn px-4" 
                 tooltip="로그아웃"
               >
                 <Link href="/">
-                  <LogOut /> <span className="font-bold">로그아웃</span>
+                  <LogOut className="h-5 w-5" /> <span className="font-bold">로그아웃</span>
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
