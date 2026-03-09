@@ -2,7 +2,7 @@
 
 import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
-import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, CreditCard, LogOut, Package, Truck } from 'lucide-react';
+import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';

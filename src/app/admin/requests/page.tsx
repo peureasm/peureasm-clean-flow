@@ -1,13 +1,13 @@
 "use client"
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, limit } from 'firebase/firestore';
+import { collection, query, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { ArrowRight, ClipboardList, Download, FileSpreadsheet, Search } from 'lucide-react';
+import { ArrowRight, ClipboardList, FileSpreadsheet, Search } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
@@ -139,11 +139,11 @@ export default function AdminRequestsPage() {
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">병원명</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">수거요청일</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">상태</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider">최종 업데이트</TableHead>
-                  <TableHead className="text-right font-bold text-xs uppercase tracking-wider">상세보기</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">병원명</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">수거요청일</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">상태</TableHead>
+                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">최종 업데이트</TableHead>
+                  <TableHead className="text-right font-bold text-xs uppercase tracking-wider h-12">상세보기</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -156,7 +156,7 @@ export default function AdminRequestsPage() {
                       {new Date(req.updatedAt || req.createdAt).toLocaleString()}
                     </TableCell>
                     <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9 hover:bg-primary/10 hover:text-primary">
+                      <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9 hover:bg-primary/10 hover:text-primary transition-all">
                         <Link href={`/admin/requests/${req.id}`}>
                           <ArrowRight className="h-4 w-4" />
                         </Link>

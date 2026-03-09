@@ -6,8 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import StatusBadge from '@/components/shared/StatusBadge';
-import { Package, Truck, AlertTriangle, CheckCircle2, ArrowRight, Sparkles, BrainCircuit, RefreshCw, Hospital } from 'lucide-react';
-import { aiDiscrepancyResolutionAssistant, AiDiscrepancyResolutionAssistantOutput } from '@/ai/flows/ai-discrepancy-resolution-assistant-flow';
+import { Package, Truck, AlertTriangle, ArrowRight, RefreshCw, Hospital } from 'lucide-react';
+import { AiDiscrepancyResolutionAssistantOutput } from '@/ai/flows/ai-discrepancy-resolution-assistant-flow';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, limit } from 'firebase/firestore';
 import Link from 'next/link';
@@ -37,10 +37,10 @@ export default function AdminDashboard() {
   const totalHospitals = hospitals?.length || 0;
 
   const kpis = [
-    { label: '활성 공정', value: `${activeRequests}건`, icon: Package, color: 'text-primary' },
-    { label: '납품 완료', value: `${deliveryCompleted}건`, icon: Truck, color: 'text-secondary' },
-    { label: '이슈 발생', value: `${discrepancies}건`, icon: AlertTriangle, color: 'text-chart-3' },
-    { label: '등록 병원', value: `${totalHospitals}개`, icon: Hospital, color: 'text-primary' },
+    { label: '활성 공정', value: `${activeRequests}`, unit: '건', icon: Package, color: 'text-primary' },
+    { label: '납품 완료', value: `${deliveryCompleted}`, unit: '건', icon: Truck, color: 'text-secondary' },
+    { label: '이슈 발생', value: `${discrepancies}`, unit: '건', icon: AlertTriangle, color: 'text-chart-3' },
+    { label: '등록 병원', value: `${totalHospitals}`, unit: '개', icon: Hospital, color: 'text-primary' },
   ];
 
   return (
@@ -51,10 +51,10 @@ export default function AdminDashboard() {
           <p className="text-muted-foreground font-medium mt-1">실시간 데이터 및 공정 현황을 모니터링합니다.</p>
         </div>
         <div className="flex gap-3">
-          <Button variant="secondary" asChild>
+          <Button variant="outline" className="px-6 rounded-btn" asChild>
             <Link href="/admin/stats">통계 분석</Link>
           </Button>
-          <Button className="px-8" asChild>
+          <Button className="px-8 rounded-btn shadow-xl shadow-primary/20" asChild>
             <Link href="/admin/hospitals">병원 관리</Link>
           </Button>
         </div>
@@ -62,15 +62,18 @@ export default function AdminDashboard() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {kpis.map((kpi) => (
-          <Card key={kpi.label} className="border-none hover:shadow-md transition-shadow">
+          <Card key={kpi.label} className="border-none shadow-sm hover:shadow-md transition-all duration-300 rounded-[14px]">
             <CardContent className="p-6">
               <div className="flex items-center gap-5">
-                <div className={`p-4 rounded-btn bg-accent ${kpi.color}`}>
+                <div className={`p-4 rounded-btn bg-muted ${kpi.color}`}>
                   <kpi.icon className="h-6 w-6" />
                 </div>
                 <div>
                   <p className="text-[11px] font-black text-muted-foreground uppercase tracking-widest">{kpi.label}</p>
-                  <p className="text-2xl font-black mt-0.5 text-foreground">{kpi.value}</p>
+                  <p className="text-3xl font-black mt-0.5 text-foreground">
+                    {kpi.value}
+                    <span className="text-sm font-bold text-muted-foreground ml-1">{kpi.unit}</span>
+                  </p>
                 </div>
               </div>
             </CardContent>
@@ -79,13 +82,13 @@ export default function AdminDashboard() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <Card className="lg:col-span-2 border-none">
+        <Card className="lg:col-span-2 border-none shadow-sm rounded-[14px] overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between border-b px-8 py-5">
             <CardTitle className="text-lg font-black flex items-center gap-2">
-              <RefreshCw className="h-5 w-5 text-primary animate-spin-slow" />
+              <RefreshCw className="h-5 w-5 text-primary" />
               실시간 공정 흐름
             </CardTitle>
-            <Button variant="ghost" size="sm" className="font-bold text-primary" asChild>
+            <Button variant="ghost" size="sm" className="font-bold text-primary hover:bg-accent rounded-full px-4" asChild>
               <Link href="/admin/requests">전체보기 <ArrowRight className="ml-1 h-4 w-4" /></Link>
             </Button>
           </CardHeader>
@@ -96,24 +99,24 @@ export default function AdminDashboard() {
               <Table>
                 <TableHeader className="bg-muted/30">
                   <TableRow className="hover:bg-transparent border-b-border/50">
-                    <TableHead className="pl-8 font-bold text-muted-foreground uppercase text-[11px] tracking-wider">병원 정보</TableHead>
-                    <TableHead className="font-bold text-muted-foreground uppercase text-[11px] tracking-wider">요청일</TableHead>
-                    <TableHead className="font-bold text-muted-foreground uppercase text-[11px] tracking-wider">진행 상태</TableHead>
-                    <TableHead className="text-right pr-8 font-bold text-muted-foreground uppercase text-[11px] tracking-wider">상세</TableHead>
+                    <TableHead className="pl-8 font-bold text-muted-foreground uppercase text-[11px] tracking-wider h-12">병원 정보</TableHead>
+                    <TableHead className="font-bold text-muted-foreground uppercase text-[11px] tracking-wider h-12">요청일</TableHead>
+                    <TableHead className="font-bold text-muted-foreground uppercase text-[11px] tracking-wider h-12">진행 상태</TableHead>
+                    <TableHead className="text-right pr-8 font-bold text-muted-foreground uppercase text-[11px] tracking-wider h-12">상세</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {requests && requests.length > 0 ? (
                     requests.map((req) => (
                       <TableRow key={req.id} className="hover:bg-accent/30 transition-colors border-b-border/30">
-                        <TableCell className="pl-8 py-4">
+                        <TableCell className="pl-8 py-5">
                           <p className="font-black text-foreground">{req.hospitalName}</p>
-                          <p className="text-[10px] text-muted-foreground font-mono mt-0.5">#{req.id.slice(-8).toUpperCase()}</p>
+                          <p className="text-[10px] text-muted-foreground font-mono mt-0.5 uppercase">ID: {req.id.slice(-8)}</p>
                         </TableCell>
                         <TableCell className="text-sm font-medium text-muted-foreground">{req.requestDate}</TableCell>
                         <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
                         <TableCell className="text-right pr-8">
-                          <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" asChild>
+                          <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full hover:bg-primary/10 hover:text-primary transition-colors" asChild>
                             <Link href={`/admin/requests/${req.id}`}>
                               <ArrowRight className="h-4 w-4" />
                             </Link>
@@ -133,7 +136,7 @@ export default function AdminDashboard() {
         </Card>
 
         <div className="space-y-6">
-          <Card className="border-none border-l-4 border-l-chart-3">
+          <Card className="border-none shadow-sm rounded-[14px] overflow-hidden border-l-4 border-l-chart-3">
             <CardHeader className="bg-chart-3/5 pb-4 px-6 pt-6">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-chart-3" />
@@ -147,13 +150,13 @@ export default function AdminDashboard() {
                     <div key={req.id} className="p-6 space-y-4 hover:bg-muted/20 transition-colors">
                       <div className="flex justify-between items-start">
                         <p className="font-black text-sm text-foreground">{req.hospitalName}</p>
-                        <Badge className="bg-chart-3 text-white border-none font-bold text-[10px] px-2 py-0.5">불일치</Badge>
+                        <Badge className="bg-chart-3 text-white border-none font-bold text-[10px] px-2 py-0.5 rounded-full">불일치</Badge>
                       </div>
-                      <div className="bg-accent/50 p-3 rounded-btn border border-primary/5 italic">
+                      <div className="bg-accent/50 p-4 rounded-btn border border-primary/5 italic">
                         <p className="text-[11px] text-muted-foreground leading-relaxed">"{req.discrepancyReason}"</p>
                       </div>
-                      <Button variant="outline" size="sm" className="w-full text-[11px] font-black h-10 border-chart-3/30 text-chart-3 hover:bg-chart-3 hover:text-white">
-                        AI 분석 가이드 실행
+                      <Button variant="outline" size="sm" className="w-full text-[11px] font-black h-10 border-chart-3/30 text-chart-3 hover:bg-chart-3 hover:text-white rounded-btn transition-all" asChild>
+                        <Link href="/admin/discrepancies">AI 분석 가이드 실행</Link>
                       </Button>
                     </div>
                   ))}
