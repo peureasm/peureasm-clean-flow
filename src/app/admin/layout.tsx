@@ -23,9 +23,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset className="bg-background">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-8 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
+        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-8 soft-shadow z-10">
           <div className="flex-1">
-            <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">MediLaundry Management System</h2>
+            <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">MediLaundry Flow System</h2>
           </div>
           <div className="flex items-center gap-6">
             <div className="relative cursor-pointer hover:opacity-70 transition-opacity">
@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
         </header>
-        <div className="p-8 max-w-[1600px] mx-auto w-full">
+        <div className="p-8 max-w-[1600px] mx-auto w-full animate-in fade-in duration-500">
           {children}
         </div>
       </SidebarInset>
@@ -66,7 +66,7 @@ function AdminSidebar() {
   ];
 
   return (
-    <Sidebar className="border-r border-border bg-white">
+    <Sidebar className="border-r border-border bg-white w-[240px]">
       <SidebarHeader className="h-16 flex items-center px-6 border-b border-border">
         <Link href="/admin" className="flex items-center gap-3 font-black text-primary">
           <div className="p-1.5 bg-primary rounded-lg">

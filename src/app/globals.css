@@ -5,12 +5,12 @@
 @layer base {
   :root {
     /* Background System */
-    --background: 216 20% 96%;    /* #F2F4F7 - Light Outer BG */
-    --foreground: 210 5% 8%;      /* #131415 - Darkest Text */
+    --background: 216 20% 96%;    /* #F2F4F7 - 전체 페이지 배경 (Light) */
+    --foreground: 210 5% 8%;      /* #131415 - 강조 텍스트 (Dark) */
     
     /* Card System */
-    --card: 0 0% 100%;            /* #FFFFFF */
-    --card-foreground: 212 17% 34%; /* #485666 - Title Text */
+    --card: 0 0% 100%;            /* #FFFFFF - 카드 배경 */
+    --card-foreground: 212 17% 34%; /* #485666 - 제목 텍스트 (Gray Dark) */
     
     --popover: 0 0% 100%;
     --popover-foreground: 212 17% 34%;
@@ -19,28 +19,28 @@
     --primary: 229 78% 55%;       /* #3151E5 - Primary Blue */
     --primary-foreground: 0 0% 100%;
     
-    /* Secondary/Hover Color System */
+    /* Secondary/Active System */
     --secondary: 204 96% 28%;     /* #035690 - Dark Blue */
     --secondary-foreground: 0 0% 100%;
     
-    /* Muted / Input Background */
+    /* Muted / Text System */
     --muted: 216 20% 96%;         /* #F2F4F7 */
-    --muted-foreground: 255 8% 51%; /* #7E7A8C - Gray Text */
+    --muted-foreground: 255 8% 51%; /* #7E7A8C - 일반 텍스트 (Gray) */
     
     /* Supporting / Hover Background */
     --accent: 221 100% 94%;       /* #DFE9FF - Light Blue */
     --accent-foreground: 229 78% 55%;
     
-    /* Status Colors */
-    --destructive: 0 84% 60%;     /* Red */
-    --border: 218 15% 89%;        /* #DDE1E8 - Gray Light */
+    /* Status & Border Colors */
+    --destructive: 0 84% 60%;     /* Red 계열 - Error */
+    --border: 218 15% 89%;        /* #DDE1E8 - Gray Light (구분선) */
     --input: 218 15% 89%;         /* #DDE1E8 */
     --ring: 229 78% 55%;
     
-    /* Status Chart Colors */
-    --chart-1: 229 78% 55%;       /* Blue (Normal) */
-    --chart-2: 204 96% 28%;       /* Dark Blue */
-    --chart-3: 33 100% 50%;       /* Orange (Warning) */
+    /* Chart & Badge Status */
+    --chart-1: 229 78% 55%;       /* Blue (Success) */
+    --chart-2: 204 96% 28%;       
+    --chart-3: 33 100% 50%;       /* Orange (Warning / Difference) */
     --chart-4: 221 100% 94%;
     --chart-5: 218 15% 89%;
     
@@ -67,15 +67,17 @@
   body {
     @apply bg-background text-foreground font-body antialiased;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply text-card-foreground font-headline font-bold;
-  }
+  h1 { @apply text-2xl font-bold text-foreground tracking-tight; }
+  h2 { @apply text-lg font-semibold text-card-foreground; }
+  h3 { @apply text-base font-semibold text-card-foreground; }
 }
 
-.subtle-shadow {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05), 0 2px 4px -2px rgb(0 0 0 / 0.05);
+/* Figma High Fidelity Shadow */
+.soft-shadow {
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05);
 }
 
-.kanban-column {
-  @apply bg-muted/50 p-4 rounded-[14px] min-h-[600px] border border-border/50;
+/* Custom Table Row Hover */
+.table-row-hover:hover {
+  background-color: #DFE9FF;
 }
