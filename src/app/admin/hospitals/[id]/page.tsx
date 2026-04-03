@@ -276,7 +276,7 @@ export default function HospitalDetailPage() {
                       {requests.map((req) => (
                         <TableRow key={req.id}>
                           <TableCell className="text-sm font-medium">{req.requestDate}</TableCell>
-                          <TableCell><StatusBadge status={req.currentStatus} /></TableCell>
+                          <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
                           <TableCell className="text-right">
                             <Button variant="ghost" size="icon" asChild className="rounded-full">
                               <Link href={`/admin/requests/${req.id}`}>
