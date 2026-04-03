@@ -1,7 +1,8 @@
+
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
@@ -23,28 +24,29 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     <SidebarProvider>
       <AdminSidebar />
       <SidebarInset className="bg-background">
-        <header className="flex h-16 shrink-0 items-center gap-2 border-b bg-white px-8 soft-shadow z-10">
+        <header className="flex h-16 shrink-0 items-center gap-4 border-b bg-white px-4 sm:px-8 soft-shadow z-10">
+          <SidebarTrigger className="-ml-1 md:hidden" />
           <div className="flex-1">
-            <h2 className="text-xs font-black text-muted-foreground uppercase tracking-[0.2em]">MediLaundry Flow System</h2>
+            <h2 className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-[0.2em] line-clamp-1">MediLaundry Flow System</h2>
           </div>
-          <div className="flex items-center gap-6">
-            <div className="relative cursor-pointer hover:opacity-70 transition-opacity">
+          <div className="flex items-center gap-3 sm:gap-6">
+            <div className="relative cursor-pointer hover:opacity-70 transition-opacity hidden sm:block">
               <div className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-chart-3 rounded-full border-2 border-white"></div>
               <AlertCircle className="h-5 w-5 text-muted-foreground" />
             </div>
-            <div className="h-6 w-px bg-border"></div>
+            <div className="h-6 w-px bg-border hidden sm:block"></div>
             <div className="flex items-center gap-3">
-              <div className="text-right">
-                <p className="text-sm font-bold text-foreground">{userData?.name || '관리자'}</p>
+              <div className="text-right hidden xs:block">
+                <p className="text-sm font-bold text-foreground line-clamp-1">{userData?.name || '관리자'}</p>
                 <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Super Admin</p>
               </div>
-              <div className="h-10 w-10 rounded-btn bg-primary flex items-center justify-center text-white font-black shadow-lg shadow-primary/20">
+              <div className="h-9 w-9 sm:h-10 sm:w-10 rounded-btn bg-primary flex items-center justify-center text-white font-black shadow-lg shadow-primary/20 shrink-0">
                 {userData?.name?.[0] || 'A'}
               </div>
             </div>
           </div>
         </header>
-        <div className="p-8 max-w-[1600px] mx-auto w-full animate-in fade-in duration-500">
+        <div className="p-4 sm:p-8 max-w-[1600px] mx-auto w-full animate-in fade-in duration-500">
           {children}
         </div>
       </SidebarInset>

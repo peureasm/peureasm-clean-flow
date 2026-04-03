@@ -5,11 +5,12 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, PackageCheck, Loader2, AlertCircle, Sparkles, Truck } from 'lucide-react';
+import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, PackageCheck, Loader2, AlertCircle, Sparkles, Truck, History, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, limit, doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
+import StatusBadge from '@/components/shared/StatusBadge';
 
 export default function DriverDashboard() {
   const firestore = useFirestore();
@@ -49,6 +50,7 @@ export default function DriverDashboard() {
     setIsLinking(true);
     
     setDocumentNonBlocking(doc(firestore, 'users', user.uid), {
+      id: user.uid,
       role: 'DRIVER',
       name: user.displayName || '테스트 기사님',
       isActive: true,
@@ -68,6 +70,7 @@ export default function DriverDashboard() {
 
   const collectionList = allRequests?.filter(r => r.currentStatus === '제출') || [];
   const deliveryList = allRequests?.filter(r => r.currentStatus === '출고') || [];
+  const recentHistory = allRequests?.filter(r => ['수거완료', '납품완료', '병원확인완료', '종결'].includes(r.currentStatus)).slice(0, 3) || [];
 
   if (isUserLoading || isHospLoading) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -192,11 +195,37 @@ export default function DriverDashboard() {
                       </div>
                       <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-primary transition-colors" />
                     </CardContent>
-                  </Card>
-                </Link>
-              ))}
-              {deliveryList.length === 0 && (
-                <div className="p-10 text-center text-slate-300 text-xs italic font-bold">배송 예정인 건이 없습니다.</div>
+                  </Link>
+                ))}
+                {deliveryList.length === 0 && (
+                  <div className="p-10 text-center text-slate-300 text-xs italic font-bold">배송 예정인 건이 없습니다.</div>
+                )}
+            </div>
+          </section>
+
+          <section className="space-y-4">
+            <div className="flex justify-between items-center px-1">
+              <h2 className="text-[12px] font-bold text-muted-foreground uppercase tracking-widest">최근 운송 요약</h2>
+              <Link href="/driver/history" className="text-[10px] font-black text-secondary uppercase flex items-center gap-1">전체 이력 <ChevronRight className="h-3 w-3" /></Link>
+            </div>
+            <div className="space-y-2">
+              {recentHistory.length > 0 ? recentHistory.map((req) => (
+                <Card key={req.id} className="border-none shadow-none bg-slate-50/50 rounded-2xl ring-1 ring-slate-100">
+                  <CardContent className="p-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-full bg-white flex items-center justify-center border border-slate-100">
+                        <History className="h-4 w-4 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold text-slate-700">{req.hospitalName}</p>
+                        <p className="text-[10px] text-slate-400 font-medium">{req.requestDate}</p>
+                      </div>
+                    </div>
+                    <StatusBadge status={req.currentStatus} />
+                  </CardContent>
+                </Card>
+              )) : (
+                <p className="text-center py-6 text-xs text-slate-300 italic">최근 이력이 없습니다.</p>
               )}
             </div>
           </section>

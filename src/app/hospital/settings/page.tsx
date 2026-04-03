@@ -9,7 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Hospital as HospitalIcon, Save, MapPin, Phone, User, Loader2 } from 'lucide-react';
+import { Hospital as HospitalIcon, Save, MapPin, Phone, User, Loader2, UserPlus, Share2, Copy } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 
 export default function HospitalSettingsPage() {
   const { user } = useUser();
@@ -17,6 +18,7 @@ export default function HospitalSettingsPage() {
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
+  const [isShareOpen, setIsShareOpen] = useState(false);
 
   // 1. 사용자 프로필에서 소속 병원 ID 가져오기
   const userDocRef = useMemoFirebase(() => {
@@ -75,85 +77,140 @@ export default function HospitalSettingsPage() {
     }, 500);
   };
 
+  const getInviteLink = () => {
+    if (typeof window === 'undefined' || !hospital) return '';
+    return `${window.location.origin}/hospital?inviteId=${hospital.id}&name=${encodeURIComponent(hospital.name || '')}`;
+  };
+
+  const handleCopyLink = () => {
+    const link = getInviteLink();
+    navigator.clipboard.writeText(link);
+    toast({
+      title: "초대 링크 복사 완료",
+      description: "동료 담당자에게 전달할 접속 링크가 복사되었습니다.",
+    });
+    setIsShareOpen(false);
+  };
+
   if (isLoading) return <div className="p-12 text-center text-slate-400 font-bold">병원 정보를 불러오는 중...</div>;
   if (!hospital) return <div className="p-12 text-center text-slate-400 font-bold">소속된 병원 정보를 찾을 수 없습니다.</div>;
 
   return (
-    <div className="max-w-lg mx-auto p-4 space-y-6">
+    <div className="max-w-lg mx-auto p-4 space-y-6 pb-32">
       <header className="py-4">
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">병원 정보 관리</h1>
-        <p className="text-sm text-muted-foreground">시스템에 등록된 병원 마스터 정보를 관리합니다.</p>
+        <p className="text-sm text-muted-foreground">시스템에 등록된 병원 마스터 정보 및 팀원을 관리합니다.</p>
       </header>
 
-      <form onSubmit={handleUpdate}>
-        <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
-          <CardHeader className="bg-primary/5 pb-6">
+      <section className="space-y-4">
+        <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">팀 관리</Label>
+        <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-primary text-white">
+          <CardContent className="p-6 space-y-4">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-primary text-white rounded-2xl shadow-lg shadow-primary/20">
-                <HospitalIcon className="h-6 w-6" />
+              <div className="p-2.5 bg-white/20 rounded-xl">
+                <UserPlus className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">마스터 프로필</CardTitle>
-                <p className="text-[10px] font-bold text-primary/60 uppercase">Hospital Identity</p>
+                <p className="font-bold">동료 담당자 초대</p>
+                <p className="text-[10px] text-white/70">함께 세탁물을 관리할 팀원을 초대하세요.</p>
               </div>
             </div>
-          </CardHeader>
-          <CardContent className="p-6 space-y-5">
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">병원명</Label>
-                <div className="relative">
-                  <HospitalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                  <Input id="name" name="name" defaultValue={hospital.name} className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" required />
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="address" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">주소</Label>
-                <div className="relative">
-                  <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                  <Input id="address" name="address" defaultValue={hospital.address} className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" required />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="contactPersonName" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">대표 담당자</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                    <Input id="contactPersonName" name="contactPersonName" defaultValue={hospital.contactPersonName} className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" required />
+            <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
+              <DialogTrigger asChild>
+                <Button className="w-full bg-white text-primary hover:bg-white/90 rounded-xl font-bold gap-2">
+                  <Share2 className="h-4 w-4" /> 초대 링크 생성 및 공유
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="rounded-2xl mx-4 max-w-[90vw]">
+                <DialogHeader>
+                  <DialogTitle>병원 담당자 초대</DialogTitle>
+                  <DialogDescription>
+                    이 링크를 받은 사람은 {hospital.name}의 담당자 권한으로 가입할 수 있습니다.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="py-4">
+                  <div className="flex items-center gap-2 p-3 bg-slate-50 rounded-xl border border-slate-100 mb-2">
+                    <Input value={getInviteLink()} readOnly className="bg-transparent border-none text-xs text-slate-500 focus-visible:ring-0 h-auto p-0" />
+                    <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" onClick={handleCopyLink}>
+                      <Copy className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="contactPersonPhone" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">연락처</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                    <Input 
-                      id="contactPersonPhone" 
-                      name="contactPersonPhone" 
-                      value={phoneValue}
-                      onChange={handlePhoneChange}
-                      maxLength={13}
-                      className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" 
-                      required 
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-4 border-t border-slate-50">
-              <p className="text-[11px] text-slate-400 leading-relaxed italic">
-                * 병원 마스터 정보 수정 시, 모든 시스템 관리자 및 기사에게 변경 사항이 즉시 공유됩니다.
-              </p>
-            </div>
+                <DialogFooter>
+                  <Button onClick={handleCopyLink} className="w-full rounded-xl h-12 font-bold bg-primary text-white">링크 복사하기</Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
           </CardContent>
         </Card>
+      </section>
 
-        <div className="fixed bottom-20 sm:bottom-4 left-0 right-0 p-4 max-w-lg mx-auto z-30">
+      <form onSubmit={handleUpdate} className="space-y-6">
+        <section className="space-y-4">
+          <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">병원 마스터 정보</Label>
+          <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+            <CardHeader className="bg-slate-50/50 pb-6 border-b border-slate-100">
+              <div className="flex items-center gap-3">
+                <div className="p-3 bg-white border border-slate-200 text-primary rounded-2xl shadow-sm">
+                  <HospitalIcon className="h-6 w-6" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">마스터 프로필</CardTitle>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase">Hospital Identity</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-6 space-y-5">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="name" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">병원명</Label>
+                  <div className="relative">
+                    <HospitalIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <Input id="name" name="name" defaultValue={hospital.name} className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" required />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="address" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">주소</Label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                    <Input id="address" name="address" defaultValue={hospital.address} className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" required />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="contactPersonName" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">대표 담당자</Label>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                      <Input id="contactPersonName" name="contactPersonName" defaultValue={hospital.contactPersonName} className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" required />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="contactPersonPhone" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">연락처</Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
+                      <Input 
+                        id="contactPersonPhone" 
+                        name="contactPersonPhone" 
+                        value={phoneValue}
+                        onChange={handlePhoneChange}
+                        maxLength={13}
+                        className="pl-10 rounded-xl bg-slate-50 border-none h-12 font-bold" 
+                        required 
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <div className="fixed bottom-20 sm:bottom-4 left-0 right-0 p-4 max-w-lg mx-auto z-30 pointer-events-none">
           <Button 
             type="submit" 
-            className="w-full h-14 rounded-2xl font-bold gap-2 shadow-xl shadow-primary/20"
+            className="w-full h-14 rounded-2xl font-bold gap-2 shadow-xl shadow-primary/20 pointer-events-auto"
             disabled={isSubmitting}
           >
             {isSubmitting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Save className="h-5 w-5" />}
