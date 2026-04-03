@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Camera, AlertCircle, CheckCircle2, Info, Package, Minus, Plus, Loader2 } from 'lucide-react';
+import { ChevronLeft, Camera, AlertCircle, CheckCircle2, Info, Package, Minus, Plus, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -38,6 +38,9 @@ export default function DriverCollectionDetail() {
   const [hasDiscrepancy, setHasDiscrepancy] = useState(false);
   const [reason, setReason] = useState<string>("");
 
+  // 읽기 전용 상태 판별: 상태가 '제출'이 아니면 수정 불가
+  const isReadOnly = request && request.currentStatus !== '제출';
+
   useEffect(() => {
     if (dbItems) {
       setItems(dbItems.map(i => ({ 
@@ -48,6 +51,7 @@ export default function DriverCollectionDetail() {
   }, [dbItems]);
 
   const updateQty = (itemId: string, delta: number) => {
+    if (isReadOnly) return;
     setItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, driverQty: Math.max(0, item.driverQty + delta) } : item
     ));
@@ -59,7 +63,7 @@ export default function DriverCollectionDetail() {
   }, [items]);
 
   const handleComplete = () => {
-    if (!firestore || !id) return;
+    if (!firestore || !id || isReadOnly) return;
 
     updateDocumentNonBlocking(doc(firestore, 'collectionRequests', id as string), {
       currentStatus: '수거완료',
@@ -100,6 +104,16 @@ export default function DriverCollectionDetail() {
       </div>
 
       <div className="p-6 space-y-8">
+        {isReadOnly && (
+          <div className="bg-slate-900 text-white p-4 rounded-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+            <Lock className="h-5 w-5 text-accent" />
+            <div className="flex-1">
+              <p className="text-xs font-bold">읽기 전용 모드</p>
+              <p className="text-[10px] opacity-70">이미 수거가 완료되었거나 다음 공정이 진행 중이므로 수정을 할 수 없습니다.</p>
+            </div>
+          </div>
+        )}
+
         <section className="bg-white rounded-3xl p-6 border border-border shadow-sm space-y-2 relative overflow-hidden">
           <div className="absolute top-0 right-0 p-6 opacity-5">
             <Package className="h-20 w-20 text-secondary" />
@@ -132,6 +146,7 @@ export default function DriverCollectionDetail() {
                       <Button 
                         variant="secondary" 
                         size="icon" 
+                        disabled={isReadOnly}
                         className="h-10 w-10 rounded-xl bg-white shadow-sm border border-border text-foreground hover:bg-muted"
                         onClick={() => updateQty(item.id, -1)}
                       >
@@ -141,6 +156,7 @@ export default function DriverCollectionDetail() {
                       <Button 
                         variant="secondary" 
                         size="icon" 
+                        disabled={isReadOnly}
                         className="h-10 w-10 rounded-xl bg-white shadow-sm border border-border text-foreground hover:bg-muted"
                         onClick={() => updateQty(item.id, 1)}
                       >
@@ -173,9 +189,10 @@ export default function DriverCollectionDetail() {
                 <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground font-bold">불일치 상세 사유 선택</Label>
                   <select 
-                    value={reason} 
+                    value={reason || request.discrepancyReason || ""} 
+                    disabled={isReadOnly}
                     onChange={(e) => setReason(e.target.value)}
-                    className="flex h-12 w-full items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-2 text-foreground font-bold outline-none focus:ring-2 focus:ring-secondary transition-all"
+                    className="flex h-12 w-full items-center justify-between rounded-xl border border-border bg-muted/50 px-4 py-2 text-foreground font-bold outline-none focus:ring-2 focus:ring-secondary transition-all disabled:opacity-50"
                   >
                     <option value="" disabled>사유를 선택해 주세요</option>
                     <option value="loss">세탁물 분실 의심</option>
@@ -185,7 +202,7 @@ export default function DriverCollectionDetail() {
                   </select>
                 </div>
                 <div className="grid grid-cols-3 gap-3">
-                  <div className="aspect-square bg-muted/30 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-border text-slate-400 hover:text-secondary hover:border-secondary/30 transition-all cursor-pointer group">
+                  <div className={`aspect-square bg-muted/30 rounded-2xl flex flex-col items-center justify-center border-2 border-dashed border-border text-slate-400 transition-all ${!isReadOnly ? 'hover:text-secondary hover:border-secondary/30 cursor-pointer group' : 'opacity-50'}`}>
                     <Camera className="h-8 w-8 group-hover:scale-110 transition-transform" />
                     <span className="text-[10px] mt-2 font-black uppercase">증빙 촬영</span>
                   </div>
@@ -201,21 +218,23 @@ export default function DriverCollectionDetail() {
             <p className="text-base font-black text-foreground">현장 담당자 구두 확인</p>
           </div>
           <p className="text-sm text-muted-foreground leading-relaxed font-medium">수정된 수거량을 병원 담당자에게 공유하고 최종 확인을 받았음을 서약합니다.</p>
-          <Button variant="outline" className="w-full h-12 border-border bg-muted/20 text-muted-foreground rounded-xl font-bold hover:bg-muted hover:text-foreground">
+          <Button variant="outline" disabled={isReadOnly} className="w-full h-12 border-border bg-muted/20 text-muted-foreground rounded-xl font-bold hover:bg-muted hover:text-foreground">
             담당자 서명 받기 (선택)
           </Button>
         </section>
       </div>
 
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t flex gap-3 z-30 max-w-lg mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
-        <Button 
-          className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-white shadow-xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
-          onClick={handleComplete}
-          disabled={hasDiscrepancy && (!reason)}
-        >
-          수거 검수 완료 및 저장
-        </Button>
-      </div>
+      {!isReadOnly && (
+        <div className="fixed bottom-16 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t flex gap-3 z-30 max-w-lg mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+          <Button 
+            className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-white shadow-xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
+            onClick={handleComplete}
+            disabled={hasDiscrepancy && (!reason && !request.discrepancyReason)}
+          >
+            수거 검수 완료 및 저장
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

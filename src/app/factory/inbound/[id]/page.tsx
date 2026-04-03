@@ -10,7 +10,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, CheckCircle2, AlertCircle, Info, PackageSearch } from 'lucide-react';
+import { ChevronLeft, CheckCircle2, AlertCircle, Info, PackageSearch, Lock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
 
@@ -35,6 +35,9 @@ export default function FactoryInboundDetailPage() {
 
   const [items, setItems] = useState<any[]>([]);
 
+  // 입고 수정 가능 상태: '수거완료' 단계일 때만 실입고 수량 수정 가능
+  const isReadOnly = request && request.currentStatus !== '수거완료';
+
   useEffect(() => {
     if (dbItems) {
       setItems(dbItems.map(i => ({ 
@@ -45,6 +48,7 @@ export default function FactoryInboundDetailPage() {
   }, [dbItems]);
 
   const updateQty = (itemId: string, val: string) => {
+    if (isReadOnly) return;
     const num = parseInt(val) || 0;
     setItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, inboundQty: num } : item
@@ -52,7 +56,7 @@ export default function FactoryInboundDetailPage() {
   };
 
   const handleComplete = () => {
-    if (!firestore || !id) return;
+    if (!firestore || !id || isReadOnly) return;
 
     // 1. 요청 상태를 '공장입고'로 업데이트
     updateDocumentNonBlocking(doc(firestore, 'collectionRequests', id as string), {
@@ -91,6 +95,16 @@ export default function FactoryInboundDetailPage() {
         <Badge className="bg-purple-100 text-purple-700 border-none font-bold">공장 입고 검수 단계</Badge>
       </div>
 
+      {isReadOnly && (
+        <div className="bg-slate-900 text-white p-5 rounded-3xl flex items-center gap-4">
+          <Lock className="h-6 w-6 text-accent" />
+          <div>
+            <p className="text-sm font-bold">확정된 입고 건 (수정 불가)</p>
+            <p className="text-xs opacity-60">공장 입고 검수가 완료되어 이미 세탁 공정이 진행 중입니다.</p>
+          </div>
+        </div>
+      )}
+
       <section className="bg-white rounded-3xl p-8 shadow-sm border border-slate-100 space-y-4">
         <div className="flex items-center gap-4">
           <div className="p-4 bg-purple-50 text-purple-700 rounded-2xl">
@@ -124,9 +138,10 @@ export default function FactoryInboundDetailPage() {
                     <Label className="text-[10px] font-black text-slate-400 uppercase">공장 실입고량</Label>
                     <Input 
                       type="number" 
+                      disabled={isReadOnly}
                       value={item.inboundQty}
                       onChange={(e) => updateQty(item.id, e.target.value)}
-                      className="w-24 bg-white border-none text-right font-black text-xl h-10 rounded-xl focus:ring-purple-500" 
+                      className="w-24 bg-white border-none text-right font-black text-xl h-10 rounded-xl focus:ring-purple-500 disabled:opacity-50" 
                     />
                   </div>
                 </CardContent>
@@ -146,14 +161,16 @@ export default function FactoryInboundDetailPage() {
         </div>
       </section>
 
-      <div className="pt-6">
-        <Button 
-          className="w-full h-16 rounded-2xl bg-purple-700 text-white font-black text-lg shadow-xl shadow-purple-200 hover:bg-purple-800"
-          onClick={handleComplete}
-        >
-          검수 완료 및 입고 확정
-        </Button>
-      </div>
+      {!isReadOnly && (
+        <div className="pt-6">
+          <Button 
+            className="w-full h-16 rounded-2xl bg-purple-700 text-white font-black text-lg shadow-xl shadow-purple-200 hover:bg-purple-800"
+            onClick={handleComplete}
+          >
+            검수 완료 및 입고 확정
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

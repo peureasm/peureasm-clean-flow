@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Truck, Package, Info, CheckCircle2, Loader2 } from 'lucide-react';
+import { ChevronLeft, Truck, Package, Info, CheckCircle2, Loader2, Lock } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -36,6 +36,9 @@ export default function DriverDeliveryDetail() {
 
   const [items, setItems] = useState<any[]>([]);
 
+  // 납품 가능 상태: '출고' 상태일 때만 수정 가능
+  const isReadOnly = request && request.currentStatus !== '출고';
+
   useEffect(() => {
     if (dbItems) {
       setItems(dbItems.map(i => ({ 
@@ -46,6 +49,7 @@ export default function DriverDeliveryDetail() {
   }, [dbItems]);
 
   const updateQty = (itemId: string, val: string) => {
+    if (isReadOnly) return;
     const num = parseInt(val) || 0;
     setItems(prev => prev.map(item => 
       item.id === itemId ? { ...item, deliveryQty: num } : item
@@ -53,7 +57,7 @@ export default function DriverDeliveryDetail() {
   };
 
   const handleComplete = () => {
-    if (!firestore || !id) return;
+    if (!firestore || !id || isReadOnly) return;
 
     // 1. 메인 요청 상태 업데이트
     updateDocumentNonBlocking(doc(firestore, 'collectionRequests', id as string), {
@@ -95,6 +99,16 @@ export default function DriverDeliveryDetail() {
       </div>
 
       <div className="p-4 space-y-6">
+        {isReadOnly && (
+          <div className="bg-slate-900 text-white p-4 rounded-2xl flex items-center gap-3">
+            <Lock className="h-5 w-5 text-accent" />
+            <div className="flex-1">
+              <p className="text-xs font-bold">기록 완료 (수정 불가)</p>
+              <p className="text-[10px] opacity-70">납품 처리가 이미 완료되었거나 요청이 종료된 상태입니다.</p>
+            </div>
+          </div>
+        )}
+
         <section className="bg-secondary/5 rounded-3xl p-6 border border-secondary/10 shadow-sm relative overflow-hidden">
           <div className="absolute top-0 right-0 p-8 opacity-5">
             <Truck className="h-24 w-24 text-secondary" />
@@ -128,9 +142,10 @@ export default function DriverDeliveryDetail() {
                       <Input 
                         type="number" 
                         inputMode="numeric"
+                        disabled={isReadOnly}
                         value={item.deliveryQty}
                         onChange={(e) => updateQty(item.id, e.target.value)}
-                        className="w-24 bg-muted/30 border-border text-right font-black text-2xl h-14 rounded-2xl text-secondary focus:ring-secondary" 
+                        className="w-24 bg-muted/30 border-border text-right font-black text-2xl h-14 rounded-2xl text-secondary focus:ring-secondary disabled:opacity-50" 
                       />
                     </div>
                   </div>
@@ -149,14 +164,16 @@ export default function DriverDeliveryDetail() {
         </section>
       </div>
 
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-border flex gap-3 z-30 max-w-lg mx-auto">
-        <Button 
-          className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-white shadow-2xl shadow-secondary/20 hover:bg-secondary/90 transition-all"
-          onClick={handleComplete}
-        >
-          납품 완료 처리
-        </Button>
-      </div>
+      {!isReadOnly && (
+        <div className="fixed bottom-16 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t border-border flex gap-3 z-30 max-w-lg mx-auto">
+          <Button 
+            className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-white shadow-2xl shadow-secondary/20 hover:bg-secondary/90 transition-all"
+            onClick={handleComplete}
+          >
+            납품 완료 처리
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
