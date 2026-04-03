@@ -6,7 +6,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { ChevronLeft, Clock, Package, AlertCircle, CheckCircle, History, TrendingDown, ClipboardList, MessageSquare } from 'lucide-react';
+import { 
+  ChevronLeft, Clock, Package, AlertCircle, CheckCircle, 
+  History, TrendingDown, ClipboardList, MessageSquare 
+} from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -113,7 +127,24 @@ export default function HospitalRequestDetailPage() {
                   className="bg-white rounded-xl border-slate-200 text-xs min-h-[80px]"
                 />
               </div>
-              <Button onClick={handleFinalConfirm} className="w-full h-12 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20">최종 납품 확인</Button>
+              
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="w-full h-12 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20">최종 납품 확인</Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent className="rounded-3xl mx-4 max-w-[calc(100vw-32px)]">
+                  <AlertDialogHeader>
+                    <AlertDialogTitle className="text-xl font-black">납품을 최종 확인하시겠습니까?</AlertDialogTitle>
+                    <AlertDialogDescription className="text-sm leading-relaxed">
+                      확인 버튼을 누르면 해당 요청이 '병원확인완료' 상태로 변경되며, 이후 데이터 수정이 불가능합니다. 정산 절차로 진행하시겠습니까?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter className="flex-row gap-2">
+                    <AlertDialogCancel className="flex-1 rounded-xl font-bold mt-0">취소</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleFinalConfirm} className="flex-1 bg-primary text-white rounded-xl font-black">네, 확인했습니다</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </Card>
           )}
 
