@@ -32,6 +32,20 @@
       },
       "required": ["id", "role", "isActive"]
     },
+    "LaundryItem": {
+      "title": "LaundryItem",
+      "type": "object",
+      "description": "시스템에서 취급하는 세탁 품목 마스터",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "unit": { "type": "string" },
+        "pricePerUnit": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "unit", "pricePerUnit"]
+    },
     "CollectionRequest": {
       "title": "CollectionRequest",
       "type": "object",
@@ -79,6 +93,10 @@
       {
         "path": "/users/{userId}",
         "definition": { "entityName": "User", "schema": { "$ref": "#/backend/entities/User" }, "description": "사용자 프로필 및 권한" }
+      },
+      {
+        "path": "/laundryItems/{itemId}",
+        "definition": { "entityName": "LaundryItem", "schema": { "$ref": "#/backend/entities/LaundryItem" }, "description": "세탁 품목 마스터 정보" }
       },
       {
         "path": "/collectionRequests/{collectionRequestId}",

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from 'react';
@@ -5,7 +6,7 @@ import { useFirestore, deleteDocumentNonBlocking, useUser, setDocumentNonBlockin
 import { collection, getDocs, doc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Trash2, Database, ShieldAlert, Loader2, Hospital, Sparkles } from 'lucide-react';
+import { Trash2, Database, ShieldAlert, Loader2, Hospital, Sparkles, ListIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -18,6 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { LAUNDRY_ITEMS } from '@/app/lib/data';
 
 export default function AdminSettingsPage() {
   const firestore = useFirestore();
@@ -25,7 +27,7 @@ export default function AdminSettingsPage() {
   const { toast } = useToast();
   const [isResetting, setIsResetting] = useState<string | null>(null);
 
-  const setupDemo = () => {
+  const setupDemo = async () => {
     if (!firestore || !user) return;
     setIsResetting('demo');
 
@@ -56,9 +58,19 @@ export default function AdminSettingsPage() {
       updatedAt: serverTimestamp()
     }, { merge: true });
 
+    // 3. 기본 품목 마스터 동기화
+    LAUNDRY_ITEMS.forEach(item => {
+      setDocumentNonBlocking(doc(firestore, 'laundryItems', item.id), {
+        ...item,
+        isActive: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    });
+
     toast({
-      title: "테스트 환경 구축 시작",
-      description: "테스트 데이터가 생성 대기열에 추가되었습니다.",
+      title: "테스트 환경 구축 완료",
+      description: "테스트 병원, 기사, 품목 마스터가 생성되었습니다.",
     });
     setIsResetting(null);
   };
@@ -69,16 +81,15 @@ export default function AdminSettingsPage() {
 
     try {
       const querySnapshot = await getDocs(collection(firestore, collectionName));
-      querySnapshot.docs.forEach(d => {
+      for (const d of querySnapshot.docs) {
         if (collectionName === 'collectionRequests') {
-          getDocs(collection(firestore, `collectionRequests/${d.id}/items`)).then(itemsSnapshot => {
-            itemsSnapshot.docs.forEach(itemDoc => {
-              deleteDocumentNonBlocking(doc(firestore, `collectionRequests/${d.id}/items`, itemDoc.id));
-            });
+          const itemsSnapshot = await getDocs(collection(firestore, `collectionRequests/${d.id}/items`));
+          itemsSnapshot.docs.forEach(itemDoc => {
+            deleteDocumentNonBlocking(doc(firestore, `collectionRequests/${d.id}/items`, itemDoc.id));
           });
         }
         deleteDocumentNonBlocking(doc(firestore, collectionName, d.id));
-      });
+      }
       toast({ title: `${label} 초기화 시작`, description: "데이터 삭제 명령을 전달했습니다." });
     } catch (error) {
       toast({ variant: "destructive", title: "초기화 실패", description: "삭제 작업 중 오류가 발생했습니다." });
@@ -102,7 +113,7 @@ export default function AdminSettingsPage() {
             </div>
             <div>
               <CardTitle className="text-xl">테스트 데모 구축 (Quick Demo)</CardTitle>
-              <CardDescription>정식 가입 전 워크플로우 확인을 위해 테스트용 병원과 기사를 즉시 생성합니다.</CardDescription>
+              <CardDescription>정식 가입 전 워크플로우 확인을 위해 병원, 기사, 품목 데이터를 즉시 구성합니다.</CardDescription>
             </div>
           </div>
         </CardHeader>
@@ -110,7 +121,7 @@ export default function AdminSettingsPage() {
           <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-6 rounded-3xl bg-blue-50 border border-blue-100">
             <div className="space-y-1">
               <h3 className="font-black text-lg text-blue-900">데모 환경 원클릭 구축</h3>
-              <p className="text-sm text-blue-700/80">테스트 병원 및 전담 기사 프로필을 자동으로 구성합니다.</p>
+              <p className="text-sm text-blue-700/80">품목 마스터를 포함한 필수 데이터를 자동으로 생성합니다.</p>
             </div>
             <Button 
               onClick={setupDemo} 
@@ -143,6 +154,14 @@ export default function AdminSettingsPage() {
             icon={<ShieldAlert className="h-5 w-5" />}
             onReset={() => clearCollection('collectionRequests', '수거 요청')}
             isLoading={isResetting === 'collectionRequests'}
+            color="orange"
+          />
+          <ResetSection 
+            title="품목 마스터 정보 초기화"
+            description="시스템에 등록된 모든 세탁 품목 정보를 삭제합니다."
+            icon={<ListIcon className="h-5 w-5" />}
+            onReset={() => clearCollection('laundryItems', '품목 마스터')}
+            isLoading={isResetting === 'laundryItems'}
             color="orange"
           />
           <ResetSection 

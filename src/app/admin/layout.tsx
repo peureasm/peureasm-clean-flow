@@ -3,7 +3,7 @@
 
 import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from '@/components/ui/sidebar';
-import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck } from 'lucide-react';
+import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck, ListIcon } from 'lucide-react';
 import Link from 'next/link';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -62,6 +62,7 @@ function AdminSidebar() {
     { href: '/admin', icon: LayoutDashboard, label: '대시보드' },
     { href: '/admin/hospitals', icon: Hospital, label: '병원 관리' },
     { href: '/admin/drivers', icon: Truck, label: '기사 관리' },
+    { href: '/admin/items', icon: ListIcon, label: '품목 관리' },
     { href: '/admin/requests', icon: ClipboardList, label: '전체 요청 내역' },
     { href: '/admin/discrepancies', icon: AlertCircle, label: '차이 발생 모니터링', alert: true },
     { href: '/admin/stats', icon: BarChart3, label: '통계 리포트' },
