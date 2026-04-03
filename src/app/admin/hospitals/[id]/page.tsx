@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import StatusBadge from '@/components/shared/StatusBadge';
 import { 
   ChevronLeft, Hospital, MapPin, User as UserIcon, 
-  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Truck, Check, Share2, Copy
+  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Truck, Check, Share2, Copy, XCircle
 } from 'lucide-react';
 import Link from 'next/link';
 import { useState } from 'react';
@@ -110,8 +110,23 @@ export default function HospitalDetailPage() {
     });
 
     toast({
-      title: "전담 기사 매칭 완료",
+      title: hospital?.assignedDriverId ? "전담 기사 변경 완료" : "전담 기사 매칭 완료",
       description: `${driver.name} 기사님이 ${hospital?.name}의 담당자로 지정되었습니다.`,
+    });
+  };
+
+  const handleUnassignDriver = () => {
+    if (!firestore || !id || !hospitalRef) return;
+
+    updateDocumentNonBlocking(hospitalRef, {
+      assignedDriverId: null,
+      assignedDriverName: null,
+      updatedAt: new Date().toISOString()
+    });
+
+    toast({
+      title: "배정 해제 완료",
+      description: "해당 병원의 전담 기사 배정이 취소되었습니다.",
     });
   };
 
@@ -135,7 +150,7 @@ export default function HospitalDetailPage() {
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => router.back()} className="rounded-full">
             <ChevronLeft className="h-6 w-6" />
@@ -145,10 +160,10 @@ export default function HospitalDetailPage() {
             <p className="text-sm text-muted-foreground uppercase font-mono">Hospital Code: {hospital.id}</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Dialog open={isShareOpen} onOpenChange={setIsShareOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" className="rounded-xl gap-2 border-primary text-primary hover:bg-primary/5 h-12">
+              <Button variant="outline" className="rounded-xl gap-2 border-primary text-primary hover:bg-primary/5 h-12 flex-1 md:flex-none">
                 <Share2 className="h-4 w-4" /> 초대 링크 공유
               </Button>
             </DialogTrigger>
@@ -175,7 +190,7 @@ export default function HospitalDetailPage() {
 
           <Dialog open={isAddStaffOpen} onOpenChange={setIsAddStaffOpen}>
             <DialogTrigger asChild>
-              <Button className="rounded-xl gap-2 bg-slate-900 h-12">
+              <Button className="rounded-xl gap-2 bg-slate-900 h-12 flex-1 md:flex-none">
                 <UserPlus className="h-4 w-4" /> 담당자 수동 등록
               </Button>
             </DialogTrigger>
@@ -246,14 +261,14 @@ export default function HospitalDetailPage() {
         <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <Tabs defaultValue="requests" className="w-full">
             <div className="px-6 pt-4 border-b">
-              <TabsList className="bg-transparent h-12 gap-6">
-                <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold">
+              <TabsList className="bg-transparent h-12 gap-6 flex overflow-x-auto no-scrollbar">
+                <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <ClipboardList className="h-4 w-4 mr-2" /> 공정 이력
                 </TabsTrigger>
-                <TabsTrigger value="staff" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold">
+                <TabsTrigger value="staff" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <ShieldCheck className="h-4 w-4 mr-2" /> 계정 현황
                 </TabsTrigger>
-                <TabsTrigger value="drivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold">
+                <TabsTrigger value="drivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <Truck className="h-4 w-4 mr-2" /> 기사 매칭
                 </TabsTrigger>
               </TabsList>
@@ -327,9 +342,21 @@ export default function HospitalDetailPage() {
 
             <TabsContent value="drivers" className="m-0">
               <div className="p-0">
-                <div className="p-6 bg-slate-50/50 border-b">
-                  <h3 className="text-sm font-bold text-slate-700">전담 수거 기사 지정</h3>
-                  <p className="text-xs text-muted-foreground">이 병원의 세탁물 수거를 전담할 기사님을 선택하여 매칭합니다.</p>
+                <div className="p-6 bg-slate-50/50 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700">전담 수거 기사 지정 및 변경</h3>
+                    <p className="text-xs text-muted-foreground">이 병원의 세탁물 수거를 전담할 기사님을 선택하여 매칭하거나 변경합니다.</p>
+                  </div>
+                  {hospital.assignedDriverId && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-destructive font-bold hover:bg-destructive/5 gap-2"
+                      onClick={handleUnassignDriver}
+                    >
+                      <XCircle className="h-4 w-4" /> 배정 해제
+                    </Button>
+                  )}
                 </div>
                 {isDriversLoading ? (
                   <div className="p-12 text-center text-slate-300">기사 목록 조회 중...</div>
@@ -337,24 +364,29 @@ export default function HospitalDetailPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="font-bold">기사명</TableHead>
-                        <TableHead className="font-bold">계정/ID</TableHead>
-                        <TableHead className="text-right font-bold">작업</TableHead>
+                        <TableHead className="font-bold text-xs uppercase">기사명</TableHead>
+                        <TableHead className="font-bold text-xs uppercase hidden sm:table-cell">계정/ID</TableHead>
+                        <TableHead className="text-right font-bold text-xs uppercase">배정 상태</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {drivers.map((driver) => (
-                        <TableRow key={driver.id} className="group">
+                        <TableRow key={driver.id} className="group transition-colors hover:bg-slate-50/50">
                           <TableCell className="font-bold">{driver.name}</TableCell>
-                          <TableCell className="text-xs text-slate-500 font-mono">{driver.id}</TableCell>
+                          <TableCell className="text-xs text-slate-500 font-mono hidden sm:table-cell">{driver.username || driver.id}</TableCell>
                           <TableCell className="text-right">
                             {hospital.assignedDriverId === driver.id ? (
-                              <Badge className="bg-primary text-white gap-1 px-3 py-1">
-                                <Check className="h-3 w-3" /> 매칭됨
+                              <Badge className="bg-primary text-white gap-1 px-3 py-1.5 rounded-xl border-none font-bold">
+                                <Check className="h-3 w-3" /> 현재 담당자
                               </Badge>
                             ) : (
-                              <Button variant="outline" size="sm" className="rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => handleAssignDriver(driver)}>
-                                담당 기사로 지정
+                              <Button 
+                                variant={hospital.assignedDriverId ? "outline" : "default"} 
+                                size="sm" 
+                                className="rounded-xl font-bold h-9 transition-all" 
+                                onClick={() => handleAssignDriver(driver)}
+                              >
+                                {hospital.assignedDriverId ? "이 기사로 변경" : "담당 기사로 지정"}
                               </Button>
                             )}
                           </TableCell>
