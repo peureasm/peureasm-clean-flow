@@ -44,8 +44,10 @@
         "requestDate": { "type": "string", "format": "date" },
         "currentStatus": { "type": "string", "enum": ["제출", "수거완료", "공장입고", "세탁중", "건조중", "포장완료", "출고", "납품완료", "병원확인완료", "종결"] },
         "specialNotes": { "type": "string" },
+        "hospitalFeedback": { "type": "string", "description": "최종 확인 시 병원 담당자의 피드백" },
         "isContaminated": { "type": "boolean" },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "finalConfirmedAt": { "type": "string", "format": "date-time" }
       },
       "required": ["id", "hospitalId", "currentStatus", "createdAt"]
     },

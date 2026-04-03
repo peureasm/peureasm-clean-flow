@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital, FileSpreadsheet } from 'lucide-react';
+import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital, FileSpreadsheet, MessageSquare, CheckCircle2 } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -164,8 +164,21 @@ export default function AdminRequestDetailPage() {
                  <div className="mt-6 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex gap-3">
                    <AlertCircle className="h-5 w-5 text-orange-500 shrink-0" />
                    <div>
-                     <p className="text-sm font-bold text-orange-700">발생된 이슈 사유</p>
+                     <p className="text-sm font-bold text-orange-700">발생된 이슈 사유 (기사 보고)</p>
                      <p className="text-sm text-orange-600 italic">"{request.discrepancyReason}"</p>
+                   </div>
+                 </div>
+               )}
+
+               {request.hospitalFeedback && (
+                 <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">
+                   <MessageSquare className="h-5 w-5 text-primary shrink-0" />
+                   <div>
+                     <p className="text-sm font-bold text-primary">병원 최종 피드백</p>
+                     <p className="text-sm text-slate-700 font-medium leading-relaxed">"{request.hospitalFeedback}"</p>
+                     {request.finalConfirmedAt && (
+                       <p className="text-[10px] text-slate-400 mt-1 font-bold">확인 시각: {new Date(request.finalConfirmedAt).toLocaleString()}</p>
+                     )}
                    </div>
                  </div>
                )}
@@ -217,6 +230,15 @@ export default function AdminRequestDetailPage() {
                       <p className="text-[10px] text-muted-foreground">{new Date(request.updatedAt || request.createdAt).toLocaleString()}</p>
                     </div>
                   </div>
+                  {request.finalConfirmedAt && (
+                    <div className="relative">
+                      <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-white"></div>
+                      <div>
+                        <p className="text-xs font-bold text-emerald-600">병원 담당자 최종 승인</p>
+                        <p className="text-[10px] text-muted-foreground">{new Date(request.finalConfirmedAt).toLocaleString()}</p>
+                      </div>
+                    </div>
+                  )}
                   {request.inboundAt && (
                     <div className="relative">
                       <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-purple-500 border-2 border-white"></div>

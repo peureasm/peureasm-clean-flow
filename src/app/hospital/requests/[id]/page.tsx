@@ -5,19 +5,22 @@ import { useParams, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Clock, Package, AlertCircle, CheckCircle, History, TrendingDown, ClipboardList } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { ChevronLeft, Clock, Package, AlertCircle, CheckCircle, History, TrendingDown, ClipboardList, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { LAUNDRY_ITEMS } from '@/app/lib/data';
+import { useState } from 'react';
 
 export default function HospitalRequestDetailPage() {
   const { id } = useParams();
   const router = useRouter();
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [feedback, setFeedback] = useState("");
 
   const requestRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -36,6 +39,7 @@ export default function HospitalRequestDetailPage() {
     if (!firestore || !id) return;
     updateDocumentNonBlocking(doc(firestore, 'collectionRequests', id as string), {
       currentStatus: '병원확인완료',
+      hospitalFeedback: feedback,
       finalConfirmedAt: new Date().toISOString()
     });
     toast({
@@ -90,15 +94,36 @@ export default function HospitalRequestDetailPage() {
           </div>
           
           {request.currentStatus === '납품완료' && (
-            <Card className="bg-primary/5 border-primary/20 rounded-2xl p-4 border-2 border-dashed">
+            <Card className="bg-primary/5 border-primary/20 rounded-2xl p-5 border-2 border-dashed space-y-4">
               <div className="flex gap-3">
                 <CheckCircle className="h-6 w-6 text-primary shrink-0" />
-                <div className="space-y-2">
+                <div className="space-y-1">
                   <p className="text-sm font-bold text-primary">세탁물이 병원에 도착했습니다!</p>
-                  <p className="text-xs text-slate-600">수량을 확인하고 '최종 납품 확인' 버튼을 눌러주세요.</p>
-                  <Button onClick={handleFinalConfirm} className="w-full h-10 rounded-xl bg-primary text-white font-bold">최종 납품 확인</Button>
+                  <p className="text-xs text-slate-600">수량을 확인하고 확인 버튼을 눌러주세요.</p>
                 </div>
               </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                  <MessageSquare className="h-3 w-3" /> 서비스 피드백 (선택)
+                </label>
+                <Textarea 
+                  placeholder="세탁 상태나 배송 서비스에 대한 의견을 남겨주세요."
+                  value={feedback}
+                  onChange={(e) => setFeedback(e.target.value)}
+                  className="bg-white rounded-xl border-slate-200 text-xs min-h-[80px]"
+                />
+              </div>
+              <Button onClick={handleFinalConfirm} className="w-full h-12 rounded-xl bg-primary text-white font-bold shadow-lg shadow-primary/20">최종 납품 확인</Button>
+            </Card>
+          )}
+
+          {request.hospitalFeedback && (
+            <Card className="bg-slate-50 border-none rounded-2xl p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <MessageSquare className="h-4 w-4 text-primary" />
+                <p className="text-[10px] font-bold text-slate-400 uppercase">남겨주신 피드백</p>
+              </div>
+              <p className="text-sm text-slate-700 italic">"{request.hospitalFeedback}"</p>
             </Card>
           )}
         </section>
