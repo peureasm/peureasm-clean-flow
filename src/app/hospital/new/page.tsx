@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Minus, Save, Send, ChevronLeft, Trash2, Loader2, Info } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -251,7 +252,7 @@ export default function NewRequestPage() {
         </section>
       </div>
 
-      <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t flex gap-3 z-30 max-w-lg mx-auto soft-shadow">
+      <div className="fixed bottom-20 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t flex gap-3 z-30 max-w-lg mx-auto soft-shadow">
         <Button variant="outline" className="flex-1 h-14 rounded-xl font-bold" onClick={() => router.back()}>취소</Button>
         <Button 
           className="flex-[2] h-14 rounded-xl font-black text-lg gap-2 bg-primary text-white shadow-xl shadow-primary/20"
