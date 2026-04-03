@@ -195,11 +195,12 @@ export default function DriverDashboard() {
                       </div>
                       <ChevronRight className="h-5 w-5 text-slate-300 group-hover:text-primary transition-colors" />
                     </CardContent>
-                  </Link>
-                ))}
-                {deliveryList.length === 0 && (
-                  <div className="p-10 text-center text-slate-300 text-xs italic font-bold">배송 예정인 건이 없습니다.</div>
-                )}
+                  </Card>
+                </Link>
+              ))}
+              {deliveryList.length === 0 && (
+                <div className="p-10 text-center text-slate-300 text-xs italic font-bold">배송 예정인 건이 없습니다.</div>
+              )}
             </div>
           </section>
 
