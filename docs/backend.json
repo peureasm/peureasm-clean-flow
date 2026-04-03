@@ -13,7 +13,8 @@
         "contactPersonPhone": { "type": "string" },
         "registrationDate": { "type": "string", "format": "date-time" },
         "assignedDriverId": { "type": "string", "description": "배정된 기사 UID" },
-        "assignedDriverName": { "type": "string", "description": "배정된 기사 성함" }
+        "assignedDriverName": { "type": "string", "description": "배정된 기사 성함" },
+        "assignedItemIds": { "type": "array", "items": { "type": "string" }, "description": "해당 병원에서 취급하는 품목 ID 목록" }
       },
       "required": ["id", "name", "address"]
     },

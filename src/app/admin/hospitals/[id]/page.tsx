@@ -3,19 +3,20 @@
 
 import { useParams, useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where, limit } from 'firebase/firestore';
+import { doc, collection, query, where, limit, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from '@/components/ui/checkbox';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { 
   ChevronLeft, Hospital, MapPin, User as UserIcon, 
-  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Truck, Check, Share2, Copy, XCircle
+  Calendar, ClipboardList, ArrowRight, UserPlus, ShieldCheck, Truck, Check, Share2, Copy, XCircle, ListIcon, Save
 } from 'lucide-react';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { 
   Dialog, DialogContent, DialogDescription, DialogFooter, 
   DialogHeader, DialogTitle, DialogTrigger 
@@ -31,6 +32,7 @@ export default function HospitalDetailPage() {
   const { toast } = useToast();
   const [isAddStaffOpen, setIsAddStaffOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isSavingItems, setIsSavingItems] = useState(false);
 
   // 병원 마스터 정보 조회
   const hospitalRef = useMemoFirebase(() => {
@@ -68,9 +70,24 @@ export default function HospitalDetailPage() {
     );
   }, [firestore]);
 
+  // 전체 품목 리스트 조회 (배정용)
+  const itemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'laundryItems'), orderBy('name'));
+  }, [firestore]);
+
   const { data: requests, isLoading: isReqLoading } = useCollection(requestsQuery);
   const { data: staff, isLoading: isStaffLoading } = useCollection(staffQuery);
   const { data: drivers, isLoading: isDriversLoading } = useCollection(driversQuery);
+  const { data: globalItems, isLoading: isItemsLoading } = useCollection(itemsQuery);
+
+  const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (hospital?.assignedItemIds) {
+      setSelectedItemIds(hospital.assignedItemIds);
+    }
+  }, [hospital]);
 
   const handleAddStaff = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -128,6 +145,30 @@ export default function HospitalDetailPage() {
       title: "배정 해제 완료",
       description: "해당 병원의 전담 기사 배정이 취소되었습니다.",
     });
+  };
+
+  const toggleItem = (itemId: string) => {
+    setSelectedItemIds(prev => 
+      prev.includes(itemId) ? prev.filter(id => id !== itemId) : [...prev, itemId]
+    );
+  };
+
+  const handleSaveAssignedItems = () => {
+    if (!firestore || !id || !hospitalRef) return;
+    setIsSavingItems(true);
+
+    updateDocumentNonBlocking(hospitalRef, {
+      assignedItemIds: selectedItemIds,
+      updatedAt: new Date().toISOString()
+    });
+
+    setTimeout(() => {
+      toast({
+        title: "품목 설정 저장 완료",
+        description: `${hospital?.name}의 취급 품목 목록이 업데이트되었습니다.`,
+      });
+      setIsSavingItems(false);
+    }, 500);
   };
 
   const getInviteLink = () => {
@@ -268,6 +309,9 @@ export default function HospitalDetailPage() {
                 <TabsTrigger value="staff" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <ShieldCheck className="h-4 w-4 mr-2" /> 계정 현황
                 </TabsTrigger>
+                <TabsTrigger value="items" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
+                  <ListIcon className="h-4 w-4 mr-2" /> 품목 설정
+                </TabsTrigger>
                 <TabsTrigger value="drivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <Truck className="h-4 w-4 mr-2" /> 기사 매칭
                 </TabsTrigger>
@@ -336,6 +380,53 @@ export default function HospitalDetailPage() {
                   </Table>
                 ) : (
                   <div className="p-20 text-center text-slate-300">등록된 병원 담당자가 없습니다. 초대 링크를 공유하세요.</div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="items" className="m-0">
+              <div className="p-0">
+                <div className="p-6 bg-slate-50/50 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-700">병원별 취급 품목 배정</h3>
+                    <p className="text-xs text-muted-foreground">이 병원에서 수거 신청 시 노출될 세탁 품목을 선택해 주세요.</p>
+                  </div>
+                  <Button 
+                    onClick={handleSaveAssignedItems}
+                    className="rounded-xl bg-primary text-white font-bold h-10 gap-2 shadow-lg shadow-primary/20"
+                    disabled={isSavingItems}
+                  >
+                    <Save className="h-4 w-4" /> {isSavingItems ? '저장 중...' : '품목 설정 저장'}
+                  </Button>
+                </div>
+                
+                {isItemsLoading ? (
+                  <div className="p-12 text-center text-slate-300">품목 마스터 로딩 중...</div>
+                ) : globalItems && globalItems.length > 0 ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 p-4 gap-2">
+                    {globalItems.map((item) => (
+                      <div 
+                        key={item.id} 
+                        className={`flex items-center gap-3 p-4 rounded-2xl border transition-all cursor-pointer ${selectedItemIds.includes(item.id) ? 'bg-primary/5 border-primary shadow-sm' : 'bg-white border-slate-100'}`}
+                        onClick={() => toggleItem(item.id)}
+                      >
+                        <Checkbox 
+                          checked={selectedItemIds.includes(item.id)} 
+                          onCheckedChange={() => toggleItem(item.id)}
+                          className="rounded-md"
+                        />
+                        <div className="flex-1">
+                          <p className="text-sm font-black text-slate-800">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">{item.unit} / ₩{item.pricePerUnit.toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-20 text-center text-slate-300">
+                    시스템에 등록된 품목 마스터가 없습니다. <br/>
+                    <Link href="/admin/items" className="text-primary font-bold underline">품목 관리</Link>에서 품목을 먼저 등록하세요.
+                  </div>
                 )}
               </div>
             </TabsContent>
