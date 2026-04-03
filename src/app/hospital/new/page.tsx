@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from 'react';
@@ -103,7 +104,7 @@ export default function NewRequestPage() {
   if (isHospLoading) return <div className="p-20 text-center font-bold text-slate-400">Loading...</div>;
 
   return (
-    <div className="max-w-lg mx-auto bg-background min-h-screen pb-32">
+    <div className="max-w-lg mx-auto bg-background min-h-screen pb-48">
       <div className="sticky top-0 z-20 bg-white border-b p-4 flex items-center justify-between soft-shadow">
         <Link href="/hospital" className="p-2 hover:bg-muted rounded-full">
           <ChevronLeft className="h-6 w-6 text-slate-600" />
@@ -218,7 +219,7 @@ export default function NewRequestPage() {
         </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t flex gap-3 z-30 max-w-lg mx-auto soft-shadow">
+      <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t flex gap-3 z-30 max-w-lg mx-auto soft-shadow">
         <Button variant="outline" className="flex-1 h-14 rounded-xl font-bold" onClick={() => router.back()}>취소</Button>
         <Button 
           className="flex-[2] h-14 rounded-xl font-black text-lg gap-2 bg-primary text-white"

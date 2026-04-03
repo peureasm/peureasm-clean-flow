@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useParams, useRouter } from 'next/navigation';
@@ -63,7 +64,7 @@ export default function HospitalRequestDetailPage() {
   }
 
   return (
-    <div className="max-w-lg mx-auto bg-[#F8FAFC] min-h-screen pb-32">
+    <div className="max-w-lg mx-auto bg-[#F8FAFC] min-h-screen pb-48">
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
         <Link href="/hospital/requests" className="p-1 hover:bg-slate-100 rounded-full transition-colors">
           <ChevronLeft className="h-6 w-6" />
@@ -174,7 +175,7 @@ export default function HospitalRequestDetailPage() {
         </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t flex gap-3 z-30 max-w-lg mx-auto">
+      <div className="fixed bottom-16 sm:bottom-0 left-0 right-0 p-4 bg-white/80 backdrop-blur-md border-t flex gap-3 z-30 max-w-lg mx-auto">
         <Button variant="outline" className="flex-1 h-14 rounded-2xl font-bold border-slate-200" onClick={() => router.push('/hospital/requests')}>
           목록으로
         </Button>

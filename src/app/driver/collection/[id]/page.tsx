@@ -8,7 +8,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { ChevronLeft, Camera, AlertCircle, CheckCircle2, Info, Package, Minus, Plus } from 'lucide-react';
+import { ChevronLeft, Camera, AlertCircle, CheckCircle2, Info, Package, Minus, Plus, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
@@ -90,7 +90,7 @@ export default function DriverCollectionDetail() {
   if (!request) return <div className="p-8 text-center text-muted-foreground font-bold">데이터를 찾을 수 없습니다.</div>;
 
   return (
-    <div className="min-h-screen pb-32 bg-background">
+    <div className="min-h-screen pb-48 bg-background">
       <div className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b p-4 flex items-center justify-between">
         <Link href="/driver" className="p-2 hover:bg-muted rounded-full transition-colors">
           <ChevronLeft className="h-6 w-6 text-slate-600" />
@@ -207,7 +207,7 @@ export default function DriverCollectionDetail() {
         </section>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t flex gap-3 z-30 max-w-lg mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
+      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white/90 backdrop-blur-xl border-t flex gap-3 z-30 max-w-lg mx-auto shadow-[0_-4px_20px_rgba(0,0,0,0.05)]">
         <Button 
           className="w-full h-16 rounded-2xl font-black text-lg gap-2 bg-secondary text-white shadow-xl shadow-secondary/20 hover:scale-[1.02] active:scale-95 disabled:opacity-50 disabled:grayscale transition-all"
           onClick={handleComplete}
