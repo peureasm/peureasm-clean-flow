@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useEffect, useState, useRef, Suspense } from 'react';
@@ -37,7 +38,9 @@ function RoleSelectorContent() {
   // 자동 익명 로그인 (로그인 페이지가 아닌 경우에만 프로토타입 편의를 위해 유지)
   useEffect(() => {
     if (!isUserLoading && !user && auth && pathname !== '/login') {
-      initiateAnonymousSignIn(auth);
+      initiateAnonymousSignIn(auth).catch(() => {
+        // 익명 로그인 실패 시 무시 (사용자가 직접 로그인을 선택할 수 있도록 함)
+      });
     }
   }, [user, isUserLoading, auth, pathname]);
 
@@ -46,37 +49,42 @@ function RoleSelectorContent() {
     const syncUserProfile = async () => {
       if (user && firestore && !isSwitching) {
         const userRef = doc(firestore, 'users', user.uid);
-        const userSnap = await getDoc(userRef);
         
-        // URL 쿼리 파라미터에서 초대 정보 확인
-        const inviteId = searchParams.get('inviteId');
-        const driverInvite = searchParams.get('driverInvite');
-        const inviteName = searchParams.get('name');
-
-        if (!userSnap.exists()) {
-          // 신규 유저 생성
-          const role = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
-          setDocumentNonBlocking(userRef, {
-            id: user.uid,
-            username: user.email || `user_${user.uid.slice(0, 5)}`,
-            name: inviteName || user.displayName || '사용자',
-            role: role,
-            hospitalId: inviteId || null,
-            isActive: true,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-          }, { merge: true });
+        try {
+          const userSnap = await getDoc(userRef);
           
-          if (role && pathname === '/') router.push(`/${role.toLowerCase()}`);
-        } else if (inviteId && userSnap.data()?.hospitalId !== inviteId) {
-          // 이미 유저가 있지만 새로운 병원 초대 링크로 들어온 경우 업데이트
-          updateDoc(userRef, {
-            hospitalId: inviteId,
-            role: 'HOSPITAL',
-            updatedAt: serverTimestamp()
-          });
-          toast({ title: "소속 병원 변경", description: "초대받은 병원으로 소속이 변경되었습니다." });
-          router.push('/hospital');
+          // URL 쿼리 파라미터에서 초대 정보 확인
+          const inviteId = searchParams.get('inviteId');
+          const driverInvite = searchParams.get('driverInvite');
+          const inviteName = searchParams.get('name');
+
+          if (!userSnap.exists()) {
+            // 신규 유저 생성
+            const role = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
+            setDocumentNonBlocking(userRef, {
+              id: user.uid,
+              username: user.email || `user_${user.uid.slice(0, 5)}`,
+              name: inviteName || user.displayName || '사용자',
+              role: role,
+              hospitalId: inviteId || null,
+              isActive: true,
+              updatedAt: serverTimestamp(),
+              createdAt: serverTimestamp(),
+            }, { merge: true });
+            
+            if (role && pathname === '/') router.push(`/${role.toLowerCase()}`);
+          } else if (inviteId && userSnap.data()?.hospitalId !== inviteId) {
+            // 이미 유저가 있지만 새로운 병원 초대 링크로 들어온 경우 업데이트
+            await updateDoc(userRef, {
+              hospitalId: inviteId,
+              role: 'HOSPITAL',
+              updatedAt: serverTimestamp()
+            });
+            toast({ title: "소속 병원 변경", description: "초대받은 병원으로 소속이 변경되었습니다." });
+            router.push('/hospital');
+          }
+        } catch (e) {
+          console.error("Profile sync error:", e);
         }
       }
     };

@@ -1,9 +1,10 @@
+
 "use client"
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,54 +28,57 @@ export default function LoginPage() {
     }
   }, [user, isUserLoading, router]);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
     setIsLoading(true);
     
-    initiateEmailSignIn(auth, email, password)
-      .then(() => {
-        toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
-      })
-      .catch((error: any) => {
-        console.error("Login error:", error);
-        let message = "이메일 또는 비밀번호를 확인하세요.";
-        if (error.code === 'auth/invalid-credential') {
-          message = "가입되지 않은 계정이거나 비밀번호가 틀렸습니다.";
-        }
-        toast({ 
-          variant: "destructive", 
-          title: "로그인 실패", 
-          description: message 
-        });
-        setIsLoading(false);
+    try {
+      await initiateEmailSignIn(auth, email, password);
+      toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+    } catch (error: any) {
+      let message = "이메일 또는 비밀번호를 확인하세요.";
+      if (error.code === 'auth/invalid-credential' || error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password') {
+        message = "계정 정보가 일치하지 않습니다. 이메일과 비밀번호를 다시 확인해 주세요.";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "너무 많은 로그인 시도가 감지되었습니다. 잠시 후 다시 시도해 주세요.";
+      }
+      
+      toast({ 
+        variant: "destructive", 
+        title: "로그인 실패", 
+        description: message 
       });
+      setIsLoading(false);
+    }
   };
 
-  const handleSignUp = (e: React.FormEvent) => {
+  const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
     setIsLoading(true);
     
-    initiateEmailSignUp(auth, email, password)
-      .then(() => {
-        toast({ title: "회원가입 성공", description: "계정이 생성되었습니다." });
-      })
-      .catch((error: any) => {
-        console.error("Signup error:", error);
-        let message = "계정 생성에 실패했습니다. 다시 시도해 주세요.";
-        if (error.code === 'auth/email-already-in-use') {
-          message = "이미 사용 중인 이메일 주소입니다.";
-        } else if (error.code === 'auth/weak-password') {
-          message = "비밀번호가 너무 취약합니다 (6자 이상 필요).";
-        }
-        toast({ 
-          variant: "destructive", 
-          title: "가입 실패", 
-          description: message 
-        });
-        setIsLoading(false);
+    try {
+      await initiateEmailSignUp(auth, email, password);
+      toast({ title: "회원가입 성공", description: "계정이 생성되었습니다. 이제 로그인이 가능합니다." });
+      // 가입 후 상태 업데이트로 인해 메인으로 이동하거나 탭을 전환할 수 있음
+    } catch (error: any) {
+      let message = "계정 생성에 실패했습니다. 다시 시도해 주세요.";
+      if (error.code === 'auth/email-already-in-use') {
+        message = "이미 사용 중인 이메일 주소입니다.";
+      } else if (error.code === 'auth/weak-password') {
+        message = "비밀번호가 너무 취약합니다 (6자 이상 필요).";
+      } else if (error.code === 'auth/invalid-email') {
+        message = "유효하지 않은 이메일 형식입니다.";
+      }
+      
+      toast({ 
+        variant: "destructive", 
+        title: "가입 실패", 
+        description: message 
       });
+      setIsLoading(false);
+    }
   };
 
   if (isUserLoading) {
