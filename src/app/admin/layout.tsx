@@ -5,34 +5,23 @@ import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck, ListIcon, Users, ShieldAlert, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useAuth, initiateSignOut } from '@/firebase';
 import { usePathname, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useEffect } from 'react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
+  const { user, userData, isUserLoading } = useUser();
   const router = useRouter();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
-
-  // 1. 미인증 사용자 처리 (useEffect 내에서 안전하게 이동)
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
 
-  // 로딩 중이거나 인증되지 않은 경우 로딩 화면 표시
-  if (isUserLoading || isUserDocLoading || !user) {
+  if (isUserLoading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -41,7 +30,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // 2. 권한 체크 (Admin이 아닌 경우 차단)
+  // 2. 권한 체크 (userData가 로드된 후 Role 확인)
   if (userData && userData.role !== 'ADMIN') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">

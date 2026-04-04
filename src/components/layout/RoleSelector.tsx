@@ -6,8 +6,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
 import { Hospital, Truck, Factory, ShieldCheck, GripVertical, X, Loader2 } from 'lucide-react';
-import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
+import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { doc, serverTimestamp, getDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -17,7 +17,7 @@ function RoleSelectorContent() {
   const searchParams = useSearchParams();
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
+  const { user, userData, isUserLoading } = useUser();
   const { toast } = useToast();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -35,61 +35,53 @@ function RoleSelectorContent() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 자동 익명 로그인 (로그인 페이지가 아닌 경우에만 프로토타입 편의를 위해 유지)
+  // 자동 익명 로그인 (프로토타입 편의를 위해 유지하되 에러 처리 강화)
   useEffect(() => {
     if (!isUserLoading && !user && auth && pathname !== '/login') {
-      initiateAnonymousSignIn(auth).catch(() => {
-        // 익명 로그인 실패 시 무시 (사용자가 직접 로그인을 선택할 수 있도록 함)
-      });
+      initiateAnonymousSignIn(auth).catch((err) => console.log("Anonymous sign-in skipped:", err.message));
     }
   }, [user, isUserLoading, auth, pathname]);
 
-  // 프로필 초기 생성 및 유지
+  // 프로필 초기 생성 및 초대 정보 동기화
   useEffect(() => {
     const syncUserProfile = async () => {
       if (user && firestore && !isSwitching) {
         const userRef = doc(firestore, 'users', user.uid);
         
-        try {
-          const userSnap = await getDoc(userRef);
-          
-          // URL 쿼리 파라미터에서 초대 정보 확인
-          const inviteId = searchParams.get('inviteId');
-          const driverInvite = searchParams.get('driverInvite');
-          const inviteName = searchParams.get('name');
+        // URL 쿼리 파라미터에서 초대 정보 확인
+        const inviteId = searchParams.get('inviteId');
+        const driverInvite = searchParams.get('driverInvite');
+        const inviteName = searchParams.get('name');
 
-          if (!userSnap.exists()) {
-            // 신규 유저 생성
-            const role = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
-            setDocumentNonBlocking(userRef, {
-              id: user.uid,
-              username: user.email || `user_${user.uid.slice(0, 5)}`,
-              name: inviteName || user.displayName || '사용자',
-              role: role,
-              hospitalId: inviteId || null,
-              isActive: true,
-              updatedAt: serverTimestamp(),
-              createdAt: serverTimestamp(),
-            }, { merge: true });
-            
-            if (role && pathname === '/') router.push(`/${role.toLowerCase()}`);
-          } else if (inviteId && userSnap.data()?.hospitalId !== inviteId) {
-            // 이미 유저가 있지만 새로운 병원 초대 링크로 들어온 경우 업데이트
-            await updateDoc(userRef, {
-              hospitalId: inviteId,
-              role: 'HOSPITAL',
-              updatedAt: serverTimestamp()
-            });
-            toast({ title: "소속 병원 변경", description: "초대받은 병원으로 소속이 변경되었습니다." });
-            router.push('/hospital');
-          }
-        } catch (e) {
-          console.error("Profile sync error:", e);
+        if (!userData) {
+          // 신규 유저 데이터가 전역 상태에 없는 경우(또는 아직 생성 전) 생성 로직
+          const role = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
+          setDocumentNonBlocking(userRef, {
+            id: user.uid,
+            username: user.email || `user_${user.uid.slice(0, 5)}`,
+            name: inviteName || user.displayName || '신규 사용자',
+            role: role,
+            hospitalId: inviteId || null,
+            isActive: true,
+            updatedAt: serverTimestamp(),
+            createdAt: serverTimestamp(),
+          }, { merge: true });
+          
+          if (role && pathname === '/') router.push(`/${role.toLowerCase()}`);
+        } else if (inviteId && userData.hospitalId !== inviteId) {
+          // 이미 유저가 있지만 새로운 병원 초대 링크로 들어온 경우 업데이트
+          updateDocumentNonBlocking(userRef, {
+            hospitalId: inviteId,
+            role: 'HOSPITAL',
+            updatedAt: serverTimestamp()
+          });
+          toast({ title: "소속 병원 변경", description: "초대받은 병원으로 소속 정보가 업데이트되었습니다." });
+          router.push('/hospital');
         }
       }
     };
     syncUserProfile();
-  }, [user, firestore, currentPathRole, isSwitching, searchParams, router, toast, pathname]);
+  }, [user, userData, firestore, isSwitching, searchParams, router, toast, pathname, currentPathRole]);
 
   const handleRoleSwitch = async (roleId: UserRole) => {
     if (!user || !firestore) return;
@@ -98,7 +90,7 @@ function RoleSelectorContent() {
     const userRef = doc(firestore, 'users', user.uid);
     
     try {
-      await updateDoc(userRef, {
+      updateDocumentNonBlocking(userRef, {
         role: roleId,
         updatedAt: serverTimestamp(),
       });
@@ -106,12 +98,11 @@ function RoleSelectorContent() {
       router.push(`/${roleId.toLowerCase()}`);
       setIsOpen(false);
       toast({
-        title: "역할 전환",
-        description: `사용자 권한이 [${roleId}]로 변경되었습니다.`,
+        title: "권한 전환 완료",
+        description: `사용자 권한이 [${roleId}] 데이터로 변경되었습니다.`,
       });
     } catch (e) {
       console.error(e);
-      router.push(`/${roleId.toLowerCase()}`);
     } finally {
       setIsSwitching(false);
     }
@@ -149,7 +140,6 @@ function RoleSelectorContent() {
     };
   }, [isDragging]);
 
-  // 로그인 페이지에서는 툴을 숨김 (깔끔한 UI를 위해)
   if (pathname === '/login') return null;
 
   return (
@@ -162,7 +152,7 @@ function RoleSelectorContent() {
           onMouseDown={onMouseDown}
           onClick={() => !isDragging && setIsOpen(true)}
           className={cn(
-            "h-12 w-12 rounded-full shadow-2xl p-0 flex items-center justify-center bg-primary text-white border-2 border-white/20 hover:scale-105 active:scale-95 transition-transform cursor-grab active:cursor-grabbing",
+            "h-12 w-12 rounded-full shadow-2xl p-0 flex items-center justify-center bg-slate-900 text-white border-2 border-white/20 hover:scale-105 active:scale-95 transition-transform cursor-grab active:cursor-grabbing",
             isDragging && "scale-110 shadow-primary/40"
           )}
         >
@@ -177,7 +167,7 @@ function RoleSelectorContent() {
           >
             <div className="flex items-center gap-2">
               <GripVertical className="h-4 w-4 text-slate-300" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">역할 전환 엔진</span>
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">실시간 권한 데이타 전환</span>
             </div>
             <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full" onClick={() => setIsOpen(false)}>
               <X className="h-4 w-4" />
@@ -188,29 +178,32 @@ function RoleSelectorContent() {
             {roles.map((role) => (
               <Button
                 key={role.id}
-                variant={currentPathRole === role.id ? 'default' : 'outline'}
+                variant={userData?.role === role.id ? 'default' : 'outline'}
                 disabled={isSwitching}
                 className={cn(
                   "justify-start gap-3 rounded-2xl h-12 border-none transition-all",
-                  currentPathRole === role.id ? "bg-primary shadow-lg shadow-primary/20" : "hover:bg-slate-50 text-slate-600"
+                  userData?.role === role.id ? "bg-slate-900 shadow-lg shadow-slate-200" : "hover:bg-slate-50 text-slate-600"
                 )}
                 onClick={() => handleRoleSwitch(role.id)}
               >
                 <div className={cn(
                   "p-1.5 rounded-lg",
-                  currentPathRole === role.id ? "bg-white/20" : "bg-slate-100"
+                  userData?.role === role.id ? "bg-white/20" : "bg-slate-100"
                 )}>
-                  {isSwitching && currentPathRole === role.id ? (
+                  {isSwitching && userData?.role === role.id ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
-                    <role.icon className={cn("h-4 w-4", currentPathRole === role.id ? "text-white" : role.color)} />
+                    <role.icon className={cn("h-4 w-4", userData?.role === role.id ? "text-white" : role.color)} />
                   )}
                 </div>
                 <span className="font-bold text-sm">{role.label}</span>
-                {currentPathRole === role.id && <div className="ml-auto h-2 w-2 rounded-full bg-white animate-pulse" />}
+                {userData?.role === role.id && <div className="ml-auto h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />}
               </Button>
             ))}
           </div>
+          <p className="mt-3 text-[9px] text-slate-400 font-medium px-2 leading-relaxed text-center">
+            전환 시 Firestore의 사용자 프로필 데이터가 실시간으로 변경되며 해당 서비스 대시보드로 자동 이동합니다.
+          </p>
         </div>
       )}
     </div>

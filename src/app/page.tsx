@@ -1,9 +1,9 @@
+
 "use client"
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser } from '@/firebase';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Hospital, Truck, Factory, ShieldCheck, ChevronRight, Loader2, LogIn } from 'lucide-react';
@@ -11,22 +11,14 @@ import Link from 'next/link';
 
 export default function LandingPage() {
   const router = useRouter();
-  const { user, isUserLoading } = useUser();
-  const firestore = useFirestore();
+  const { user, userData, isUserLoading } = useUser();
 
-  const userDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
-
-  // 이미 역할이 있는 사용자는 해당 대시보드로 자동 이동
+  // 사용자의 실제 권한 데이타(userData.role)에 따라 대시보드로 자동 이동
   useEffect(() => {
-    if (!isUserLoading && !isUserDocLoading && userData?.role) {
+    if (!isUserLoading && user && userData?.role) {
       router.push(`/${userData.role.toLowerCase()}`);
     }
-  }, [userData, isUserLoading, isUserDocLoading, router]);
+  }, [userData, isUserLoading, user, router]);
 
   const roles = [
     { id: 'hospital', label: '병원 담당자', desc: '세탁물 수거 요청 및 납품 확인', icon: Hospital, color: 'bg-blue-500' },
@@ -35,7 +27,7 @@ export default function LandingPage() {
     { id: 'admin', label: '시스템 관리자', desc: '분쟁 조율, 통계 및 정산 관리', icon: ShieldCheck, color: 'bg-slate-800' },
   ];
 
-  if (isUserLoading || (user && isUserDocLoading)) {
+  if (isUserLoading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
@@ -62,7 +54,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3">
               <span className="text-sm font-bold text-slate-600 hidden sm:block">{user.email}</span>
               <Button asChild variant="outline" className="rounded-xl h-11 px-6 font-bold border-primary text-primary hover:bg-primary/5">
-                <Link href="/login">대시보드로 가기</Link>
+                <Link href={userData?.role ? `/${userData.role.toLowerCase()}` : '/login'}>대시보드로 가기</Link>
               </Button>
             </div>
           )}
