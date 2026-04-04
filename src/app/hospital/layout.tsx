@@ -1,3 +1,4 @@
+
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
@@ -8,6 +9,7 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { useEffect } from 'react';
 
 export default function HospitalLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -30,20 +32,21 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
 
   const { data: hospital } = useDoc(hospitalRef);
 
-  // 1. 로딩 상태 처리
-  if (isUserLoading || isUserDocLoading) {
+  // 1. 미인증 사용자 처리 (useEffect 내에서 안전하게 이동)
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  // 로딩 상태 처리
+  if (isUserLoading || isUserDocLoading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
         <p className="font-bold text-slate-400">사용자 권한 확인 중...</p>
       </div>
     );
-  }
-
-  // 2. 미인증 사용자 처리
-  if (!user) {
-    router.push('/login');
-    return null;
   }
 
   // 3. 권한 체크 (HOSPITAL이 아닌 경우 차단)
