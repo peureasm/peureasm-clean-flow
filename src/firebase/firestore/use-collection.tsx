@@ -63,8 +63,7 @@ export function useCollection<T = any>(
       },
       (firestoreError: FirestoreError) => {
         // Safe path extraction for error reporting
-        // Attempts to find the collection path from various possible object structures
-        let path = "query_result";
+        let path = "unknown_collection";
         const target = memoizedTargetRefOrQuery as any;
         
         if (target instanceof CollectionReference) {
@@ -72,9 +71,8 @@ export function useCollection<T = any>(
         } else if (target?.path) {
           path = target.path;
         } else if (target?._query?.path?.segments) {
+          // Query 객체에서 경로 세그먼트 추출
           path = target._query.path.segments.join('/');
-        } else {
-          path = "collectionRequests"; // Default fallback based on app context
         }
 
         const contextualError = new FirestorePermissionError({
