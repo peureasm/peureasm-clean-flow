@@ -31,26 +31,50 @@ export default function LoginPage() {
     e.preventDefault();
     if (!auth) return;
     setIsLoading(true);
-    try {
-      initiateEmailSignIn(auth, email, password);
-      toast({ title: "로그인 시도", description: "인증 정보를 확인 중입니다." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "로그인 오류", description: "이메일 또는 비밀번호를 확인하세요." });
-      setIsLoading(false);
-    }
+    
+    initiateEmailSignIn(auth, email, password)
+      .then(() => {
+        toast({ title: "로그인 성공", description: "대시보드로 이동합니다." });
+      })
+      .catch((error: any) => {
+        console.error("Login error:", error);
+        let message = "이메일 또는 비밀번호를 확인하세요.";
+        if (error.code === 'auth/invalid-credential') {
+          message = "가입되지 않은 계정이거나 비밀번호가 틀렸습니다.";
+        }
+        toast({ 
+          variant: "destructive", 
+          title: "로그인 실패", 
+          description: message 
+        });
+        setIsLoading(false);
+      });
   };
 
   const handleSignUp = (e: React.FormEvent) => {
     e.preventDefault();
     if (!auth) return;
     setIsLoading(true);
-    try {
-      initiateEmailSignUp(auth, email, password);
-      toast({ title: "회원가입 시도", description: "새로운 계정을 생성 중입니다." });
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "가입 오류", description: "계정 생성에 실패했습니다." });
-      setIsLoading(false);
-    }
+    
+    initiateEmailSignUp(auth, email, password)
+      .then(() => {
+        toast({ title: "회원가입 성공", description: "계정이 생성되었습니다." });
+      })
+      .catch((error: any) => {
+        console.error("Signup error:", error);
+        let message = "계정 생성에 실패했습니다. 다시 시도해 주세요.";
+        if (error.code === 'auth/email-already-in-use') {
+          message = "이미 사용 중인 이메일 주소입니다.";
+        } else if (error.code === 'auth/weak-password') {
+          message = "비밀번호가 너무 취약합니다 (6자 이상 필요).";
+        }
+        toast({ 
+          variant: "destructive", 
+          title: "가입 실패", 
+          description: message 
+        });
+        setIsLoading(false);
+      });
   };
 
   if (isUserLoading) {
