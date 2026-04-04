@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { 
   ChevronLeft, Clock, Package, AlertCircle, CheckCircle, 
-  History, TrendingDown, ClipboardList, MessageSquare 
+  History, TrendingDown, ClipboardList, MessageSquare, CreditCard
 } from 'lucide-react';
 import {
   AlertDialog,
@@ -26,8 +26,7 @@ import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { LAUNDRY_ITEMS } from '@/app/lib/data';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 export default function HospitalRequestDetailPage() {
   const { id } = useParams();
@@ -35,6 +34,7 @@ export default function HospitalRequestDetailPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [feedback, setFeedback] = useState("");
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const requestRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -46,8 +46,26 @@ export default function HospitalRequestDetailPage() {
     return collection(firestore, `collectionRequests/${id}/items`);
   }, [firestore, id]);
 
+  const masterItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'laundryItems');
+  }, [firestore]);
+
   const { data: request, isLoading: isReqLoading } = useDoc(requestRef);
   const { data: items, isLoading: isItemsLoading } = useCollection(itemsQuery);
+  const { data: masterItems } = useCollection(masterItemsQuery);
+
+  useEffect(() => {
+    if (items && masterItems) {
+      const total = items.reduce((acc, item) => {
+        const master = masterItems.find(m => m.id === item.laundryItemId);
+        const price = master?.pricePerUnit || 0;
+        const qty = item.deliveredQuantity || item.verifiedQuantity || item.requestedQuantity || 0;
+        return acc + (price * qty);
+      }, 0);
+      setTotalAmount(total);
+    }
+  }, [items, masterItems]);
 
   const handleFinalConfirm = () => {
     if (!firestore || !id) return;
@@ -106,6 +124,14 @@ export default function HospitalRequestDetailPage() {
             </div>
             <StatusBadge status={request.currentStatus as any} />
           </div>
+
+          <div className="bg-primary/5 p-4 rounded-2xl border border-primary/10 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4 text-primary" />
+              <span className="text-xs font-bold text-slate-600">정산 금액</span>
+            </div>
+            <span className="font-black text-primary text-lg">₩{totalAmount.toLocaleString()}</span>
+          </div>
           
           {request.currentStatus === '납품완료' && (
             <Card className="bg-primary/5 border-primary/20 rounded-2xl p-5 border-2 border-dashed space-y-4">
@@ -147,62 +173,40 @@ export default function HospitalRequestDetailPage() {
               </AlertDialog>
             </Card>
           )}
-
-          {request.hospitalFeedback && (
-            <Card className="bg-slate-50 border-none rounded-2xl p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <MessageSquare className="h-4 w-4 text-primary" />
-                <p className="text-[10px] font-bold text-slate-400 uppercase">남겨주신 피드백</p>
-              </div>
-              <p className="text-sm text-slate-700 italic">"{request.hospitalFeedback}"</p>
-            </Card>
-          )}
         </section>
 
         <section className="space-y-4">
           <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2 flex items-center gap-2">
-            <ClipboardList className="h-4 w-4" /> 단계별 상세 수량
+            <ClipboardList className="h-4 w-4" /> 정산 상세 정보
           </h3>
           <div className="space-y-3">
             {items?.map((item) => {
-              const itemName = item.itemName || LAUNDRY_ITEMS.find(li => li.id === item.laundryItemId)?.name || '품목명 없음';
-              const reqQty = item.requestedQuantity || 0;
-              const verQty = item.verifiedQuantity !== undefined ? item.verifiedQuantity : '-';
-              const delQty = item.deliveredQuantity !== undefined ? item.deliveredQuantity : '-';
+              const master = masterItems?.find(m => m.id === item.laundryItemId);
+              const price = master?.pricePerUnit || 0;
+              const qty = item.deliveredQuantity || item.verifiedQuantity || item.requestedQuantity || 0;
               
               return (
                 <Card key={item.id} className="rounded-3xl border-none shadow-sm bg-white overflow-hidden">
                   <CardContent className="p-5 space-y-4">
                     <div className="flex justify-between items-center border-b pb-3">
-                      <p className="font-black text-slate-900 text-lg">{itemName}</p>
-                      <Badge variant="secondary" className="bg-primary/5 text-primary border-none">요청: {reqQty}</Badge>
-                    </div>
-                    
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">현장 수거 (기사)</p>
-                        <p className={`text-lg font-black ${verQty !== '-' && verQty !== reqQty ? 'text-orange-500' : 'text-slate-800'}`}>
-                          {verQty}<span className="text-xs ml-0.5 font-bold">{verQty !== '-' ? '개' : ''}</span>
-                        </p>
-                      </div>
-                      <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 flex flex-col justify-center">
-                        <p className="text-[10px] font-bold text-slate-400 uppercase mb-1">최종 납품 (병원)</p>
-                        <p className={`text-lg font-black ${delQty !== '-' && delQty !== verQty ? 'text-indigo-600' : 'text-slate-800'}`}>
-                          {delQty}<span className="text-xs ml-0.5 font-bold">{delQty !== '-' ? '개' : ''}</span>
-                        </p>
+                      <p className="font-black text-slate-900 text-lg">{item.itemName}</p>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">단가: ₩{price.toLocaleString()}</p>
+                        <Badge variant="secondary" className="bg-primary/5 text-primary border-none">최종: {qty}</Badge>
                       </div>
                     </div>
-                    
-                    {(verQty !== '-' && verQty !== reqQty) && (
-                      <div className="flex items-center gap-2 text-[10px] text-orange-500 font-bold bg-orange-50 p-2 rounded-lg border border-orange-100">
-                        <TrendingDown className="h-3 w-3" />
-                        <span>수거 과정에서 {Math.abs(Number(verQty) - Number(reqQty))}개의 수량 차이가 발생했습니다.</span>
-                      </div>
-                    )}
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs text-slate-500 font-medium">정산 소계</span>
+                      <span className="font-black text-slate-900">₩{(price * qty).toLocaleString()}</span>
+                    </div>
                   </CardContent>
                 </Card>
               );
             })}
+            <div className="p-6 bg-slate-900 rounded-3xl text-white flex justify-between items-center shadow-xl">
+              <span className="font-bold">최종 정산 합계</span>
+              <span className="text-2xl font-black text-primary-foreground">₩{totalAmount.toLocaleString()}</span>
+            </div>
           </div>
         </section>
 
@@ -236,7 +240,7 @@ export default function HospitalRequestDetailPage() {
           목록으로
         </Button>
         <Button className="flex-1 h-14 rounded-2xl font-bold bg-slate-900 text-white shadow-xl" onClick={() => window.print()}>
-          인증서 출력
+          영수증 출력
         </Button>
       </div>
     </div>

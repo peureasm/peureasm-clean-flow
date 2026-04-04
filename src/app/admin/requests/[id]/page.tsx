@@ -6,14 +6,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital, FileSpreadsheet, MessageSquare, CheckCircle2 } from 'lucide-react';
+import { ChevronLeft, Clock, Package, AlertCircle, History, TrendingDown, ClipboardList, MapPin, User, Sparkles, Hospital, FileSpreadsheet, MessageSquare, CheckCircle2, CreditCard, DollarSign } from 'lucide-react';
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useDoc, useCollection, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc, collection } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
-import { LAUNDRY_ITEMS } from '@/app/lib/data';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { aiDiscrepancyResolutionAssistant, AiDiscrepancyResolutionAssistantOutput } from '@/ai/flows/ai-discrepancy-resolution-assistant-flow';
 import * as XLSX from 'xlsx';
 
@@ -24,6 +23,7 @@ export default function AdminRequestDetailPage() {
   const { toast } = useToast();
   const [isResolving, setIsResolving] = useState(false);
   const [resolutionResult, setResolutionResult] = useState<AiDiscrepancyResolutionAssistantOutput | null>(null);
+  const [totalAmount, setTotalAmount] = useState(0);
 
   const requestRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -35,8 +35,26 @@ export default function AdminRequestDetailPage() {
     return collection(firestore, `collectionRequests/${id}/items`);
   }, [firestore, id]);
 
+  const masterItemsQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'laundryItems');
+  }, [firestore]);
+
   const { data: request, isLoading: isReqLoading } = useDoc(requestRef);
   const { data: items, isLoading: isItemsLoading } = useCollection(itemsQuery);
+  const { data: masterItems } = useCollection(masterItemsQuery);
+
+  useEffect(() => {
+    if (items && masterItems) {
+      const total = items.reduce((acc, item) => {
+        const master = masterItems.find(m => m.id === item.laundryItemId);
+        const price = master?.pricePerUnit || 0;
+        const qty = item.deliveredQuantity || item.verifiedQuantity || item.requestedQuantity || 0;
+        return acc + (price * qty);
+      }, 0);
+      setTotalAmount(total);
+    }
+  }, [items, masterItems]);
 
   const handleResolveAI = async () => {
     if (!request) return;
@@ -57,6 +75,19 @@ export default function AdminRequestDetailPage() {
     }
   };
 
+  const handleSettle = () => {
+    if (!firestore || !id) return;
+    updateDocumentNonBlocking(doc(firestore, 'collectionRequests', id as string), {
+      currentStatus: '종결',
+      settledAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    toast({
+      title: "정산 및 종결 완료",
+      description: "해당 요청의 정산 처리가 완료되어 종결 상태로 변경되었습니다.",
+    });
+  };
+
   const handleExportExcel = () => {
     if (!request || !items || items.length === 0) {
       toast({
@@ -68,20 +99,27 @@ export default function AdminRequestDetailPage() {
     }
 
     try {
-      const excelData = items.map(item => ({
-        "품목명": item.itemName,
-        "병원 요청 수량": item.requestedQuantity || 0,
-        "기사 확인 수량": item.verifiedQuantity ?? "-",
-        "공장 입고 수량": item.inboundQuantity ?? "-",
-        "최종 납품 수량": item.deliveredQuantity ?? "-",
-        "수량 차이(병원-공장)": item.inboundQuantity !== undefined ? (item.inboundQuantity - item.requestedQuantity) : "-"
-      }));
+      const excelData = items.map(item => {
+        const master = masterItems?.find(m => m.id === item.laundryItemId);
+        const price = master?.pricePerUnit || 0;
+        const qty = item.deliveredQuantity || item.verifiedQuantity || item.requestedQuantity || 0;
+        return {
+          "품목명": item.itemName,
+          "단가": price,
+          "최종 수량": qty,
+          "소계": price * qty,
+          "병원 요청": item.requestedQuantity || 0,
+          "기사 확인": item.verifiedQuantity ?? "-",
+          "공장 입고": item.inboundQuantity ?? "-",
+          "최종 납품": item.deliveredQuantity ?? "-"
+        };
+      });
 
       const worksheet = XLSX.utils.json_to_sheet(excelData);
       const workbook = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(workbook, worksheet, "품목상세");
+      XLSX.utils.book_append_sheet(workbook, worksheet, "정산상세");
 
-      const fileName = `MediLaundry_상세내역_${request.hospitalName}_${request.requestDate}.xlsx`;
+      const fileName = `MediLaundry_정산내역_${request.hospitalName}_${request.requestDate}.xlsx`;
       XLSX.writeFile(workbook, fileName);
 
       toast({
@@ -90,11 +128,6 @@ export default function AdminRequestDetailPage() {
       });
     } catch (error) {
       console.error("Excel export error:", error);
-      toast({
-        variant: "destructive",
-        title: "다운로드 오류",
-        description: "엑셀 파일을 생성하는 중 오류가 발생했습니다.",
-      });
     }
   };
 
@@ -122,13 +155,17 @@ export default function AdminRequestDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
+           {request.currentStatus === '병원확인완료' && (
+             <Button onClick={handleSettle} className="rounded-xl bg-slate-900 text-white gap-2 h-10 px-6 font-bold shadow-lg shadow-slate-200">
+               <CreditCard className="h-4 w-4" /> 정산 및 종결 처리
+             </Button>
+           )}
            <Button 
              onClick={handleExportExcel} 
-             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 px-4 shadow-md shadow-emerald-500/20 font-bold border-none transition-all active:scale-95 text-xs"
+             className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 h-10 px-4 shadow-md shadow-emerald-500/20 font-bold border-none"
            >
              <FileSpreadsheet className="h-4 w-4" /> 엑셀 다운로드
            </Button>
-           <Button variant="outline" className="rounded-xl h-10 text-xs font-bold" onClick={() => window.print()}>문서 출력</Button>
            <Button className="rounded-xl bg-orange-500 hover:bg-orange-600 gap-2 h-10 text-xs font-bold shadow-md shadow-orange-500/20" onClick={handleResolveAI} disabled={isResolving}>
              <Sparkles className="h-4 w-4" /> {isResolving ? 'AI 분석 중...' : 'AI 분석'}
            </Button>
@@ -140,8 +177,11 @@ export default function AdminRequestDetailPage() {
           <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
             <CardHeader className="bg-slate-50 border-b pb-4">
               <div className="flex justify-between items-center">
-                <CardTitle className="text-lg font-bold">공정 진행 상태</CardTitle>
-                <StatusBadge status={request.currentStatus as any} />
+                <CardTitle className="text-lg font-bold">공정 및 정산 현황</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Badge className="bg-primary/5 text-primary border-none font-bold">합계: ₩{totalAmount.toLocaleString()}</Badge>
+                  <StatusBadge status={request.currentStatus as any} />
+                </div>
               </div>
             </CardHeader>
             <CardContent className="p-6">
@@ -155,61 +195,45 @@ export default function AdminRequestDetailPage() {
                     <p className="font-bold">{request.requestDate}</p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">생성시각</p>
-                    <p className="text-sm">{new Date(request.createdAt).toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-400 uppercase">정산 시각</p>
+                    <p className="text-sm">{request.settledAt ? new Date(request.settledAt).toLocaleString() : '미완료'}</p>
                   </div>
                </div>
-               
-               {request.discrepancyReason && (
-                 <div className="mt-6 p-4 bg-orange-50 border border-orange-100 rounded-2xl flex gap-3">
-                   <AlertCircle className="h-5 w-5 text-orange-500 shrink-0" />
-                   <div>
-                     <p className="text-sm font-bold text-orange-700">발생된 이슈 사유 (기사 보고)</p>
-                     <p className="text-sm text-orange-600 italic">"{request.discrepancyReason}"</p>
-                   </div>
-                 </div>
-               )}
-
-               {request.hospitalFeedback && (
-                 <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-2xl flex gap-3">
-                   <MessageSquare className="h-5 w-5 text-primary shrink-0" />
-                   <div>
-                     <p className="text-sm font-bold text-primary">병원 최종 피드백</p>
-                     <p className="text-sm text-slate-700 font-medium leading-relaxed">"{request.hospitalFeedback}"</p>
-                     {request.finalConfirmedAt && (
-                       <p className="text-[10px] text-slate-400 mt-1 font-bold">확인 시각: {new Date(request.finalConfirmedAt).toLocaleString()}</p>
-                     )}
-                   </div>
-                 </div>
-               )}
             </CardContent>
           </Card>
 
           <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
             <CardHeader className="border-b pb-4">
-               <CardTitle className="text-lg font-bold">단계별 수량 통합 대조 (수량 추적)</CardTitle>
+               <CardTitle className="text-lg font-bold">품목별 정산 상세</CardTitle>
             </CardHeader>
             <CardContent className="p-0 overflow-hidden">
                <Table>
                  <TableHeader className="bg-slate-50/50">
                     <TableRow>
-                      <TableHead className="font-bold">품목명</TableHead>
-                      <TableHead className="text-center font-bold">병원 요청</TableHead>
-                      <TableHead className="text-center font-bold text-primary">기사 확인</TableHead>
-                      <TableHead className="text-center font-bold text-purple-600">공장 입고</TableHead>
-                      <TableHead className="text-center font-bold text-indigo-600">최종 납품</TableHead>
+                      <TableHead className="font-bold pl-8">품목명</TableHead>
+                      <TableHead className="text-center font-bold">단가</TableHead>
+                      <TableHead className="text-center font-bold">최종 수량</TableHead>
+                      <TableHead className="text-right font-bold pr-8">소계</TableHead>
                     </TableRow>
                  </TableHeader>
                  <TableBody>
-                   {items?.map((item) => (
-                     <TableRow key={item.id}>
-                       <TableCell className="font-bold">{item.itemName}</TableCell>
-                       <TableCell className="text-center">{item.requestedQuantity}</TableCell>
-                       <TableCell className="text-center font-bold text-primary bg-primary/5">{item.verifiedQuantity ?? '-'}</TableCell>
-                       <TableCell className="text-center font-bold text-purple-600 bg-purple-50">{item.inboundQuantity ?? '-'}</TableCell>
-                       <TableCell className="text-center font-bold text-indigo-600 bg-indigo-50">{item.deliveredQuantity ?? '-'}</TableCell>
-                     </TableRow>
-                   ))}
+                   {items?.map((item) => {
+                     const master = masterItems?.find(m => m.id === item.laundryItemId);
+                     const price = master?.pricePerUnit || 0;
+                     const qty = item.deliveredQuantity || item.verifiedQuantity || item.requestedQuantity || 0;
+                     return (
+                       <TableRow key={item.id}>
+                         <TableCell className="font-bold pl-8">{item.itemName}</TableCell>
+                         <TableCell className="text-center text-slate-500 font-medium">₩{price.toLocaleString()}</TableCell>
+                         <TableCell className="text-center font-black">{qty}</TableCell>
+                         <TableCell className="text-right pr-8 font-black text-primary">₩{(price * qty).toLocaleString()}</TableCell>
+                       </TableRow>
+                     );
+                   })}
+                   <TableRow className="bg-primary/5 hover:bg-primary/5 border-t-2 border-primary/10">
+                     <TableCell colSpan={3} className="pl-8 py-6 font-black text-slate-900">최종 정산 합계</TableCell>
+                     <TableCell className="text-right pr-8 py-6 font-black text-2xl text-primary">₩{totalAmount.toLocaleString()}</TableCell>
+                   </TableRow>
                  </TableBody>
                </Table>
             </CardContent>
@@ -217,6 +241,26 @@ export default function AdminRequestDetailPage() {
         </div>
 
         <div className="space-y-6">
+          <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
+            <CardHeader className="border-b pb-4">
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-slate-400" />
+                정산 정보 가이드
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+               <p className="text-xs text-slate-500 leading-relaxed">
+                 정산 금액은 <span className="font-bold text-slate-900">최종 납품 수량(Delivered Qty)</span>을 기준으로 자동 계산됩니다. 납품이 완료되기 전에는 기사 확인 수량을 바탕으로 가계산됩니다.
+               </p>
+               <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
+                 <AlertCircle className="h-5 w-5 text-blue-500 shrink-0" />
+                 <p className="text-[11px] text-blue-700 leading-relaxed font-medium">
+                   병원 담당자가 최종 승인을 마쳐야만 '정산 대기' 상태로 전환되어 관리자가 종결 처리할 수 있습니다.
+                 </p>
+               </div>
+            </CardContent>
+          </Card>
+
           <Card className="border-none shadow-sm rounded-3xl overflow-hidden bg-white">
             <CardHeader className="border-b pb-4">
               <CardTitle className="text-sm font-bold">공정 타임라인</CardTitle>
@@ -239,49 +283,9 @@ export default function AdminRequestDetailPage() {
                       </div>
                     </div>
                   )}
-                  {request.inboundAt && (
-                    <div className="relative">
-                      <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-purple-500 border-2 border-white"></div>
-                      <div>
-                        <p className="text-xs font-bold text-purple-600">공장 입고 검수 완료</p>
-                        <p className="text-[10px] text-muted-foreground">{new Date(request.inboundAt).toLocaleString()}</p>
-                      </div>
-                    </div>
-                  )}
-                  <div className="relative opacity-50">
-                    <div className="absolute -left-[31px] top-1 h-4 w-4 rounded-full bg-slate-300 border-2 border-white"></div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-500">요청 제출됨</p>
-                      <p className="text-[10px] text-muted-foreground">{new Date(request.createdAt).toLocaleString()}</p>
-                    </div>
-                  </div>
                </div>
             </CardContent>
           </Card>
-
-          {resolutionResult && (
-            <Card className="border-none shadow-xl bg-slate-900 text-white rounded-3xl overflow-hidden animate-in zoom-in-95">
-              <CardHeader className="bg-white/5 border-b border-white/10 flex flex-row items-center gap-2">
-                <Sparkles className="h-4 w-4 text-accent" />
-                <CardTitle className="text-xs">AI 추천 해결 방안</CardTitle>
-              </CardHeader>
-              <CardContent className="p-5 space-y-4">
-                 <div className="space-y-1">
-                   <p className="text-[10px] text-accent font-bold uppercase">권장 조치</p>
-                   <p className="text-xs leading-relaxed text-slate-200">{resolutionResult.suggestedResolution}</p>
-                 </div>
-                 <div className="space-y-1">
-                   <p className="text-[10px] text-accent font-bold uppercase">커뮤니케이션 가이드</p>
-                   <div className="bg-white/5 p-3 rounded-xl text-[10px] font-mono whitespace-pre-wrap text-slate-300 border border-white/5 leading-relaxed">
-                     {resolutionResult.communicationTemplate}
-                   </div>
-                 </div>
-                 <Button className="w-full h-10 bg-accent text-slate-900 font-bold rounded-xl text-xs" onClick={() => setResolutionResult(null)}>
-                   분석 결과 닫기
-                 </Button>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>
