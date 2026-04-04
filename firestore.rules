@@ -3,8 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     /**
-     * MediLaundry Flow - Advanced Security Rules
-     * 역할(ADMIN, HOSPITAL, DRIVER, FACTORY)에 기반한 세부 접근 제어
+     * MediLaundry Flow - Prototype Security Rules
+     * 데모 및 빠른 테스트를 위해 인증된 사용자의 쓰기 권한을 일시적으로 허용합니다.
      */
     
     // 헬퍼 함수
@@ -24,28 +24,28 @@ service cloud.firestore {
       return hasRole('ADMIN');
     }
 
-    // 사용자 프로필: 본인 또는 관리자만 수정 가능
+    // 사용자 프로필: 본인 또는 관리자만 수정 가능 (역할 전환 및 초기 생성을 위해 완화)
     match /users/{userId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin() || request.auth.uid == userId;
+      allow write: if isSignedIn();
     }
 
-    // 병원 마스터: 관리자만 수정 가능
+    // 병원 마스터: 데모 배정 및 수정을 위해 인증된 사용자에게 허용
     match /hospitals/{hospitalId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isSignedIn();
     }
 
-    // 세탁 품목 마스터: 관리자만 수정 가능
+    // 세탁 품목 마스터: 데모 데이터 구축을 위해 인증된 사용자에게 허용
     match /laundryItems/{itemId} {
       allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow write: if isSignedIn();
     }
 
-    // 세탁 수거 요청: 모든 인증된 사용자가 읽을 수 있으나(공정 추적용), 생성/삭제는 제한됨
+    // 세탁 수거 요청: 모든 인증된 사용자가 읽고 업데이트 가능 (공정 진행)
     match /collectionRequests/{requestId} {
       allow read: if isSignedIn();
-      allow create: if isSignedIn() && (isAdmin() || hasRole('HOSPITAL'));
+      allow create: if isSignedIn();
       allow update: if isSignedIn(); 
       allow delete: if isAdmin();
 
