@@ -6,6 +6,8 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore, doc, onSnapshot } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -89,8 +91,16 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
                 userError: null,
               });
             },
-            (error) => {
-              console.error("Profile sync error:", error);
+            async (error) => {
+              // Create contextual error for security rules debugging
+              const permissionError = new FirestorePermissionError({
+                path: userDocRef.path,
+                operation: 'get',
+              });
+              
+              // Emit error to trigger global listener instead of just console.error
+              errorEmitter.emit('permission-error', permissionError);
+              
               setUserState(prev => ({ ...prev, user: firebaseUser, isUserLoading: false }));
             }
           );
