@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect } from 'react';
@@ -7,7 +6,7 @@ import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Hospital, Truck, Factory, ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
+import { Hospital, Truck, Factory, ShieldCheck, ChevronRight, Loader2, LogIn } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LandingPage() {
@@ -47,21 +46,35 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-body">
-      <header className="h-20 bg-white border-b flex items-center px-6 sm:px-12">
+      <header className="h-20 bg-white border-b flex items-center justify-between px-6 sm:px-12">
         <div className="flex items-center gap-2 font-bold text-primary">
           <div className="bg-primary text-white p-1.5 rounded-lg">
             <Hospital className="h-6 w-6" />
           </div>
           <span className="text-2xl tracking-tight">MediLaundry <span className="text-secondary">Flow</span></span>
         </div>
+        <div className="flex items-center gap-4">
+          {!user ? (
+            <Button asChild className="rounded-xl h-11 px-6 font-bold shadow-lg shadow-primary/20">
+              <Link href="/login"><LogIn className="h-4 w-4 mr-2" /> 시작하기</Link>
+            </Button>
+          ) : (
+            <div className="flex items-center gap-3">
+              <span className="text-sm font-bold text-slate-600 hidden sm:block">{user.email}</span>
+              <Button asChild variant="outline" className="rounded-xl h-11 px-6 font-bold border-primary text-primary hover:bg-primary/5">
+                <Link href="/login">대시보드로 가기</Link>
+              </Button>
+            </div>
+          )}
+        </div>
       </header>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 space-y-12 max-w-5xl mx-auto">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 space-y-12 max-w-5xl mx-auto py-20">
         <div className="text-center space-y-4 max-w-2xl">
-          <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-slate-900">
+          <h1 className="text-4xl sm:text-6xl font-black tracking-tight text-slate-900 leading-[1.1]">
             신뢰할 수 있는 <span className="text-primary underline decoration-secondary decoration-4">세탁물 관리</span>의 시작
           </h1>
-          <p className="text-lg text-slate-500">
+          <p className="text-lg text-slate-500 font-medium">
             RFID 없이도 완벽한 수량 대조와 이력 관리. 
             병원-기사-공장을 잇는 투명한 스마트 워크플로우를 경험하세요.
           </p>
@@ -69,7 +82,7 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
           {roles.map((role) => (
-            <Link key={role.id} href={`/${role.id}`}>
+            <Link key={role.id} href={user ? `/${role.id}` : '/login'}>
               <Card className="group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-none cursor-pointer overflow-hidden rounded-3xl bg-white">
                 <CardContent className="p-8 flex items-center gap-6">
                   <div className={`h-16 w-16 rounded-2xl ${role.color} text-white flex items-center justify-center shrink-0 shadow-lg`}>

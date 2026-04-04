@@ -1,29 +1,35 @@
-
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck, ListIcon, Users, ShieldAlert } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 권한 체크 (Admin이 아닌 경우 차단)
-  if (!isUserLoading && userData && userData.role !== 'ADMIN') {
+  // 1. 미인증 사용자 처리
+  if (!isUserLoading && !user) {
+    router.push('/login');
+    return null;
+  }
+
+  // 2. 권한 체크 (Admin이 아닌 경우 차단)
+  if (!isUserDocLoading && userData && userData.role !== 'ADMIN') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
         <Card className="max-w-md w-full p-10 text-center space-y-6 rounded-[40px] border-none shadow-2xl bg-white">
@@ -82,6 +88,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
 function AdminSidebar() {
   const pathname = usePathname();
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    if (auth) {
+      initiateSignOut(auth);
+      router.push('/');
+    }
+  };
 
   const menuItems = [
     { href: '/admin', icon: LayoutDashboard, label: '대시보드' },
@@ -145,13 +160,11 @@ function AdminSidebar() {
             </SidebarMenuItem>
             <SidebarMenuItem>
               <SidebarMenuButton 
-                asChild 
-                className="hover:bg-destructive/10 text-destructive/80 hover:text-destructive h-12 rounded-btn px-4" 
+                onClick={handleLogout}
+                className="hover:bg-destructive/10 text-destructive/80 hover:text-destructive h-12 rounded-btn px-4 w-full justify-start gap-3" 
                 tooltip="로그아웃"
               >
-                <Link href="/">
-                  <LogOut className="h-5 w-5" /> <span className="font-bold">로그아웃</span>
-                </Link>
+                <LogOut className="h-5 w-5" /> <span className="font-bold">로그아웃</span>
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>

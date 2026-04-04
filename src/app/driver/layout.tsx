@@ -1,19 +1,20 @@
-
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Truck, MapPin, History, Hospital, ShieldAlert, Loader2 } from 'lucide-react';
+import { Truck, MapPin, History, Hospital, ShieldAlert, Loader2, LogOut } from 'lucide-react';
 import Link from 'next/link';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function DriverLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const firestore = useFirestore();
   const pathname = usePathname();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -32,7 +33,13 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     );
   }
 
-  // 2. 권한 체크 (DRIVER가 아닌 경우 차단)
+  // 2. 미인증 사용자 처리
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
+  // 3. 권한 체크 (DRIVER가 아닌 경우 차단)
   if (userData && userData.role !== 'DRIVER') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
@@ -55,6 +62,13 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     );
   }
 
+  const handleLogout = () => {
+    if (auth) {
+      initiateSignOut(auth);
+      router.push('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background font-body">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white px-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
@@ -74,6 +88,9 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
           <div className="h-10 w-10 rounded-btn bg-secondary flex items-center justify-center text-white font-black shadow-lg shadow-secondary/20">
             {userData?.name?.[0] || 'D'}
           </div>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-400 hover:text-destructive rounded-full">
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
       

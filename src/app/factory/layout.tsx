@@ -1,19 +1,20 @@
-
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Factory, Kanban, PackageCheck, List, ShieldAlert, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { Factory, Kanban, PackageCheck, List, ShieldAlert, Loader2, LogOut } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function FactoryLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const firestore = useFirestore();
   const pathname = usePathname();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -32,7 +33,13 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  // 2. 권한 체크 (FACTORY가 아닌 경우 차단)
+  // 2. 미인증 사용자 처리
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
+  // 3. 권한 체크 (FACTORY가 아닌 경우 차단)
   if (userData && userData.role !== 'FACTORY') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
@@ -55,6 +62,13 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
     );
   }
 
+  const handleLogout = () => {
+    if (auth) {
+      initiateSignOut(auth);
+      router.push('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white px-4 sm:px-8 shadow-sm">
@@ -75,6 +89,9 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
           <div className="h-10 w-10 rounded-full bg-purple-100 flex items-center justify-center text-purple-700 font-bold border border-purple-200 shadow-inner">
             {userData?.name?.[0] || 'F'}
           </div>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-400 hover:text-destructive rounded-full">
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
       <main className="p-4 sm:p-8">

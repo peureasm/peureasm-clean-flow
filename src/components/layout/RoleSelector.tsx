@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useEffect, useState, useRef, Suspense } from 'react';
@@ -35,12 +34,12 @@ function RoleSelectorContent() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 자동 익명 로그인
+  // 자동 익명 로그인 (로그인 페이지가 아닌 경우에만 프로토타입 편의를 위해 유지)
   useEffect(() => {
-    if (!isUserLoading && !user && auth) {
+    if (!isUserLoading && !user && auth && pathname !== '/login') {
       initiateAnonymousSignIn(auth);
     }
-  }, [user, isUserLoading, auth]);
+  }, [user, isUserLoading, auth, pathname]);
 
   // 프로필 초기 생성 및 유지
   useEffect(() => {
@@ -68,7 +67,7 @@ function RoleSelectorContent() {
             createdAt: serverTimestamp(),
           }, { merge: true });
           
-          if (role) router.push(`/${role.toLowerCase()}`);
+          if (role && pathname === '/') router.push(`/${role.toLowerCase()}`);
         } else if (inviteId && userSnap.data()?.hospitalId !== inviteId) {
           // 이미 유저가 있지만 새로운 병원 초대 링크로 들어온 경우 업데이트
           updateDoc(userRef, {
@@ -82,7 +81,7 @@ function RoleSelectorContent() {
       }
     };
     syncUserProfile();
-  }, [user, firestore, currentPathRole, isSwitching, searchParams, router, toast]);
+  }, [user, firestore, currentPathRole, isSwitching, searchParams, router, toast, pathname]);
 
   const handleRoleSwitch = async (roleId: UserRole) => {
     if (!user || !firestore) return;
@@ -141,6 +140,9 @@ function RoleSelectorContent() {
       window.removeEventListener('mouseup', onMouseUp);
     };
   }, [isDragging]);
+
+  // 로그인 페이지에서는 툴을 숨김 (깔끔한 UI를 위해)
+  if (pathname === '/login') return null;
 
   return (
     <div 

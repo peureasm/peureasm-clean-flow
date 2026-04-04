@@ -1,19 +1,20 @@
-
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Hospital, LayoutDashboard, ClipboardList, PlusCircle, Settings, ShieldAlert, Loader2 } from 'lucide-react';
-import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { Hospital, LayoutDashboard, ClipboardList, PlusCircle, Settings, ShieldAlert, Loader2, LogOut } from 'lucide-react';
+import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 
 export default function HospitalLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
+  const auth = useAuth();
   const firestore = useFirestore();
   const pathname = usePathname();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -39,7 +40,13 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
     );
   }
 
-  // 2. 권한 체크 (HOSPITAL이 아닌 경우 차단)
+  // 2. 미인증 사용자 처리
+  if (!user) {
+    router.push('/login');
+    return null;
+  }
+
+  // 3. 권한 체크 (HOSPITAL이 아닌 경우 차단)
   if (userData && userData.role !== 'HOSPITAL') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
@@ -62,6 +69,13 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
     );
   }
 
+  const handleLogout = () => {
+    if (auth) {
+      initiateSignOut(auth);
+      router.push('/');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background font-body">
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white px-6 shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
@@ -72,15 +86,16 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
           <span className="text-xl tracking-tighter">MediLaundry <span className="text-muted-foreground font-medium">Hosp</span></span>
         </Link>
         <div className="ml-auto flex items-center gap-4">
-          {userData && (
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-black text-foreground">{userData.name || '담당자'}</p>
-              <p className="text-[10px] text-muted-foreground font-bold tracking-tight">{hospital?.name || '병원 정보 없음'}</p>
-            </div>
-          )}
+          <div className="text-right hidden sm:block">
+            <p className="text-sm font-black text-foreground">{userData?.name || '담당자'}</p>
+            <p className="text-[10px] text-muted-foreground font-bold tracking-tight">{hospital?.name || '병원 정보 없음'}</p>
+          </div>
           <div className="h-10 w-10 rounded-btn bg-accent flex items-center justify-center text-primary font-black shadow-inner">
             {userData?.name?.[0] || 'H'}
           </div>
+          <Button variant="ghost" size="icon" onClick={handleLogout} className="text-slate-400 hover:text-destructive rounded-full">
+            <LogOut className="h-5 w-5" />
+          </Button>
         </div>
       </header>
       <main className="pb-24 sm:pb-8">
