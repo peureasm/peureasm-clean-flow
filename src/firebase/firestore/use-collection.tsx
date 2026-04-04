@@ -73,6 +73,10 @@ export function useCollection<T = any>(
         } else if (target?._query?.path?.segments) {
           // Query 객체에서 경로 세그먼트 추출
           path = target._query.path.segments.join('/');
+        } else if (typeof target?.toString === 'function') {
+          // 마지막 수단으로 toString 확인 (예: collectionRequests)
+          const str = target.toString();
+          if (str.includes('collectionRequests')) path = 'collectionRequests';
         }
 
         const contextualError = new FirestorePermissionError({
