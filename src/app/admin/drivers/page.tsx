@@ -32,6 +32,7 @@ import {
 import { Search, Plus, Truck, User, Mail, Loader2, Hospital, ChevronRight, Share2, Copy, MoreVertical, Pencil, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Pagination from '@/components/shared/Pagination';
 
 export default function AdminDriversPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -39,16 +40,19 @@ export default function AdminDriversPage() {
   const [deletingDriver, setDeletingDriver] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  // 1. 시스템에 등록된 실제 기사(DRIVER) 목록 조회
   const driversQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('role', '==', 'DRIVER'), limit(50));
+    return query(collection(firestore, 'users'), where('role', '==', 'DRIVER'), limit(500));
   }, [firestore]);
 
-  // 2. 전체 병원 목록 조회 (배정된 병원 수 계산용)
   const hospitalsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
     return query(collection(firestore, 'hospitals'));
@@ -61,6 +65,12 @@ export default function AdminDriversPage() {
     d.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     d.username?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Paginated Data
+  const paginatedDrivers = filteredDrivers.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const handleCopyGlobalInvite = () => {
     if (typeof window === 'undefined') return;
@@ -78,7 +88,6 @@ export default function AdminDriversPage() {
   };
 
   const handleOpenEdit = (driver: any) => {
-    // Dropdown이 닫힐 시간을 주기 위해 지연 처리 (Radix UI 포인터 이벤트 버그 방지)
     setTimeout(() => {
       setEditingDriver(driver);
       setIsDialogOpen(true);
@@ -86,7 +95,6 @@ export default function AdminDriversPage() {
   };
 
   const handleOpenDelete = (driver: any) => {
-    // Dropdown이 닫힐 시간을 주기 위해 지연 처리
     setTimeout(() => {
       setDeletingDriver(driver);
     }, 100);
@@ -151,7 +159,7 @@ export default function AdminDriversPage() {
             <Share2 className="h-4 w-4" /> 공용 초대 링크 복사
           </Button>
           
-          <Button onClick={handleOpenAdd} className="flex-1 md:flex-none rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20 bg-primary">
+          <Button onClick={handleOpenAdd} className="flex-1 md:flex-none rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20 bg-primary text-white">
             <Plus className="h-5 w-5" /> 기사 수동 등록
           </Button>
         </div>
@@ -163,7 +171,10 @@ export default function AdminDriversPage() {
           className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none" 
           placeholder="기사명 또는 이메일로 검색..." 
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
@@ -173,60 +184,73 @@ export default function AdminDriversPage() {
           <p className="text-sm font-medium">기사 목록 로딩 중...</p>
         </div>
       ) : filteredDrivers.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredDrivers.map((driver) => {
-            const hospCount = getAssignedHospitalCount(driver.id);
-            return (
-              <Card key={driver.id} className="border-none shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-all group">
-                <CardHeader className="pb-4">
-                  <div className="flex justify-between items-start">
-                    <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
-                      <Truck className="h-6 w-6" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedDrivers.map((driver) => {
+              const hospCount = getAssignedHospitalCount(driver.id);
+              return (
+                <Card key={driver.id} className="border-none shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-all group">
+                  <CardHeader className="pb-4">
+                    <div className="flex justify-between items-start">
+                      <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600 group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                        <Truck className="h-6 w-6" />
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant="outline" className="text-[10px] font-bold border-emerald-100 bg-emerald-50 text-emerald-600">ACTIVE</Badge>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(driver)}>
+                              <Pencil className="h-4 w-4" /> 수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(driver)}>
+                              <Trash2 className="h-4 w-4" /> 삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant="outline" className="text-[10px] font-bold border-emerald-100 bg-emerald-50 text-emerald-600">ACTIVE</Badge>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl">
-                          <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(driver)}>
-                            <Pencil className="h-4 w-4" /> 수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(driver)}>
-                            <Trash2 className="h-4 w-4" /> 삭제
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                    <CardTitle className="text-xl font-black mt-4 text-slate-900">{driver.name}</CardTitle>
+                    <p className="text-[10px] font-mono text-slate-400 uppercase">ID: {driver.id}</p>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-2.5 text-sm text-slate-500">
+                        <Mail className="h-4 w-4 text-slate-300" />
+                        <span className="font-medium">{driver.username}</span>
+                      </div>
+                      <div className="flex items-center gap-2.5 text-sm text-slate-500">
+                        <Hospital className="h-4 w-4 text-slate-300" />
+                        <span className="font-bold text-primary">담당 병원: {hospCount}개</span>
+                      </div>
                     </div>
-                  </div>
-                  <CardTitle className="text-xl font-black mt-4 text-slate-900">{driver.name}</CardTitle>
-                  <p className="text-[10px] font-mono text-slate-400 uppercase">ID: {driver.id}</p>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="space-y-2.5">
-                    <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                      <Mail className="h-4 w-4 text-slate-300" />
-                      <span className="font-medium">{driver.username}</span>
+                    <div className="pt-4">
+                      <Button variant="outline" className="w-full rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50 group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-100" asChild>
+                        <Link href={`/admin/drivers/${driver.id}`}>
+                          상세 정보 및 이력 <ChevronRight className="h-4 w-4 ml-1" />
+                        </Link>
+                      </Button>
                     </div>
-                    <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                      <Hospital className="h-4 w-4 text-slate-300" />
-                      <span className="font-bold text-primary">담당 병원: {hospCount}개</span>
-                    </div>
-                  </div>
-                  <div className="pt-4">
-                    <Button variant="outline" className="w-full rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50 group-hover:bg-emerald-50 group-hover:text-emerald-600 group-hover:border-emerald-100" asChild>
-                      <Link href={`/admin/drivers/${driver.id}`}>
-                        상세 정보 및 이력 <ChevronRight className="h-4 w-4 ml-1" />
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+          
+          <Pagination 
+            total={filteredDrivers.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       ) : (
         <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-white">

@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -12,16 +13,21 @@ import Link from 'next/link';
 import { useState } from 'react';
 import * as XLSX from 'xlsx';
 import { useToast } from '@/hooks/use-toast';
+import Pagination from '@/components/shared/Pagination';
 
 export default function AdminRequestsPage() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [filterDate, setFilterDate] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'collectionRequests'), limit(100));
+    return query(collection(firestore, 'collectionRequests'), limit(1000));
   }, [firestore]);
 
   const { data: requests, isLoading } = useCollection(requestsQuery);
@@ -31,6 +37,12 @@ export default function AdminRequestsPage() {
     const matchDate = filterDate ? req.requestDate === filterDate : true;
     return matchSearch && matchDate;
   }) || [];
+
+  // Paginated Data
+  const paginatedRequests = filteredRequests.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const handleExportExcel = () => {
     if (filteredRequests.length === 0) {
@@ -87,7 +99,7 @@ export default function AdminRequestsPage() {
         <Button 
           onClick={handleExportExcel} 
           variant="secondary"
-          className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-secondary/20 border-none transition-all active:scale-95"
+          className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-secondary/20 border-none transition-all active:scale-95 bg-white text-secondary hover:bg-slate-50"
         >
           <FileSpreadsheet className="h-5 w-5" /> 엑셀 다운로드
         </Button>
@@ -106,21 +118,31 @@ export default function AdminRequestsPage() {
                 <Input 
                   placeholder="병원명 검색..." 
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
                   className="pl-9 rounded-xl border-slate-200 h-10 w-[200px] font-medium"
                 />
               </div>
               <Input 
                 type="date" 
                 value={filterDate}
-                onChange={(e) => setFilterDate(e.target.value)}
+                onChange={(e) => {
+                  setFilterDate(e.target.value);
+                  setCurrentPage(1);
+                }}
                 className="rounded-xl border-slate-200 h-10 w-[160px] font-medium"
               />
               {(searchTerm || filterDate) && (
                 <Button 
                   variant="ghost" 
                   size="sm" 
-                  onClick={() => {setSearchTerm(""); setFilterDate("");}}
+                  onClick={() => {
+                    setSearchTerm(""); 
+                    setFilterDate("");
+                    setCurrentPage(1);
+                  }}
                   className="text-xs text-slate-500 hover:bg-slate-100"
                 >
                   필터 초기화
@@ -136,43 +158,56 @@ export default function AdminRequestsPage() {
               데이터 로드 중...
             </div>
           ) : (
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">병원명</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">수거요청일</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">상태</TableHead>
-                  <TableHead className="font-bold text-xs uppercase tracking-wider h-12">최종 업데이트</TableHead>
-                  <TableHead className="text-right font-bold text-xs uppercase tracking-wider h-12">상세보기</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRequests.map((req) => (
-                  <TableRow key={req.id} className="hover:bg-slate-50/30 transition-colors">
-                    <TableCell className="font-black text-slate-800">{req.hospitalName}</TableCell>
-                    <TableCell className="text-sm font-medium">{req.requestDate}</TableCell>
-                    <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
-                    <TableCell className="text-xs text-muted-foreground font-medium">
-                      {new Date(req.updatedAt || req.createdAt).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9 hover:bg-primary/10 hover:text-primary transition-all">
-                        <Link href={`/admin/requests/${req.id}`}>
-                          <ArrowRight className="h-4 w-4" />
-                        </Link>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {!isLoading && filteredRequests.length === 0 && (
+            <>
+              <Table>
+                <TableHeader className="bg-slate-50/50">
                   <TableRow>
-                    <TableCell colSpan={5} className="h-32 text-center text-slate-400">
-                      조건에 맞는 요청 내역이 없습니다.
-                    </TableCell>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider h-12">병원명</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider h-12">수거요청일</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider h-12">상태</TableHead>
+                    <TableHead className="font-bold text-xs uppercase tracking-wider h-12">최종 업데이트</TableHead>
+                    <TableHead className="text-right font-bold text-xs uppercase tracking-wider h-12">상세보기</TableHead>
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedRequests.map((req) => (
+                    <TableRow key={req.id} className="hover:bg-slate-50/30 transition-colors">
+                      <TableCell className="font-black text-slate-800">{req.hospitalName}</TableCell>
+                      <TableCell className="text-sm font-medium">{req.requestDate}</TableCell>
+                      <TableCell><StatusBadge status={req.currentStatus as any} /></TableCell>
+                      <TableCell className="text-xs text-muted-foreground font-medium">
+                        {new Date(req.updatedAt || req.createdAt).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="icon" asChild className="rounded-full h-9 w-9 hover:bg-primary/10 hover:text-primary transition-all">
+                          <Link href={`/admin/requests/${req.id}`}>
+                            <ArrowRight className="h-4 w-4" />
+                          </Link>
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                  {!isLoading && filteredRequests.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={5} className="h-32 text-center text-slate-400">
+                        조건에 맞는 요청 내역이 없습니다.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              
+              <Pagination 
+                total={filteredRequests.length}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              />
+            </>
           )}
         </CardContent>
       </Card>

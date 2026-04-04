@@ -32,6 +32,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Search, Plus, ListIcon, MoreVertical, Pencil, Trash2, Loader2, DollarSign, Package } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import Pagination from '@/components/shared/Pagination';
 
 export default function AdminItemsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -40,6 +41,10 @@ export default function AdminItemsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -53,6 +58,12 @@ export default function AdminItemsPage() {
   const filteredItems = items?.filter(item => 
     item.name?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Paginated Data
+  const paginatedItems = filteredItems.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const handleOpenAdd = () => {
     setEditingItem(null);
@@ -120,7 +131,7 @@ export default function AdminItemsPage() {
           <p className="text-muted-foreground font-medium text-sm">시스템 전체에서 사용되는 세탁 품목과 단가를 관리합니다.</p>
         </div>
         
-        <Button onClick={handleOpenAdd} className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20">
+        <Button onClick={handleOpenAdd} className="rounded-xl gap-2 h-12 px-6 shadow-lg shadow-primary/20 bg-primary text-white">
           <Plus className="h-5 w-5" /> 신규 품목 등록
         </Button>
       </div>
@@ -131,7 +142,10 @@ export default function AdminItemsPage() {
           className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium" 
           placeholder="품목명으로 검색..." 
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
@@ -143,46 +157,59 @@ export default function AdminItemsPage() {
               <p className="text-sm font-medium">품목 데이터를 불러오는 중...</p>
             </div>
           ) : filteredItems.length > 0 ? (
-            <Table>
-              <TableHeader className="bg-slate-50/50">
-                <TableRow>
-                  <TableHead className="font-bold text-xs uppercase pl-8 h-12">품목명</TableHead>
-                  <TableHead className="font-bold text-xs uppercase h-12">단위</TableHead>
-                  <TableHead className="font-bold text-xs uppercase h-12">기본 단가</TableHead>
-                  <TableHead className="font-bold text-xs uppercase h-12">상태</TableHead>
-                  <TableHead className="text-right font-bold text-xs uppercase pr-8 h-12">액션</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredItems.map((item) => (
-                  <TableRow key={item.id} className="hover:bg-slate-50/30 transition-colors">
-                    <TableCell className="pl-8 py-4 font-black text-slate-800">{item.name}</TableCell>
-                    <TableCell className="py-4 font-medium text-slate-500">{item.unit}</TableCell>
-                    <TableCell className="py-4 font-black text-primary">₩{item.pricePerUnit.toLocaleString()}</TableCell>
-                    <TableCell className="py-4">
-                      <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-bold">활성</Badge>
-                    </TableCell>
-                    <TableCell className="text-right pr-8">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
-                            <MoreVertical className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="rounded-xl">
-                          <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(item)}>
-                            <Pencil className="h-4 w-4" /> 수정
-                          </DropdownMenuItem>
-                          <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(item)}>
-                            <Trash2 className="h-4 w-4" /> 삭제
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader className="bg-slate-50/50">
+                  <TableRow>
+                    <TableHead className="font-bold text-xs uppercase pl-8 h-12">품목명</TableHead>
+                    <TableHead className="font-bold text-xs uppercase h-12">단위</TableHead>
+                    <TableHead className="font-bold text-xs uppercase h-12">기본 단가</TableHead>
+                    <TableHead className="font-bold text-xs uppercase h-12">상태</TableHead>
+                    <TableHead className="text-right font-bold text-xs uppercase pr-8 h-12">액션</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedItems.map((item) => (
+                    <TableRow key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                      <TableCell className="pl-8 py-4 font-black text-slate-800">{item.name}</TableCell>
+                      <TableCell className="py-4 font-medium text-slate-500">{item.unit}</TableCell>
+                      <TableCell className="py-4 font-black text-primary">₩{item.pricePerUnit.toLocaleString()}</TableCell>
+                      <TableCell className="py-4">
+                        <Badge className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px] font-bold">활성</Badge>
+                      </TableCell>
+                      <TableCell className="text-right pr-8">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
+                              <MoreVertical className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="rounded-xl">
+                            <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(item)}>
+                              <Pencil className="h-4 w-4" /> 수정
+                            </DropdownMenuItem>
+                            <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(item)}>
+                              <Trash2 className="h-4 w-4" /> 삭제
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+              
+              <Pagination 
+                total={filteredItems.length}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onPageChange={setCurrentPage}
+                onPageSizeChange={(size) => {
+                  setPageSize(size);
+                  setCurrentPage(1);
+                }}
+              />
+            </>
           ) : (
             <div className="py-24 text-center">
               <ListIcon className="h-12 w-12 mx-auto mb-4 text-slate-200" />

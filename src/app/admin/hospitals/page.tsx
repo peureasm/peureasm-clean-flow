@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from 'react';
@@ -34,6 +35,7 @@ import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking, u
 import { collection, query, limit, doc } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import Pagination from '@/components/shared/Pagination';
 
 export default function AdminHospitalsPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -42,12 +44,17 @@ export default function AdminHospitalsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [phoneValue, setPhoneValue] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
   const firestore = useFirestore();
   const { toast } = useToast();
 
   const hospitalsQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'hospitals'), limit(100));
+    return query(collection(firestore, 'hospitals'), limit(500));
   }, [firestore]);
 
   const { data: hospitals, isLoading } = useCollection(hospitalsQuery);
@@ -56,6 +63,12 @@ export default function AdminHospitalsPage() {
     h.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     h.address?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
+
+  // Paginated Data
+  const paginatedHospitals = filteredHospitals.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, "");
@@ -156,7 +169,10 @@ export default function AdminHospitalsPage() {
           className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium" 
           placeholder="병원명 또는 주소로 검색..." 
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
@@ -166,61 +182,74 @@ export default function AdminHospitalsPage() {
           <p className="text-sm font-medium">병원 목록을 불러오는 중...</p>
         </div>
       ) : filteredHospitals.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredHospitals.map((hosp) => (
-            <Card key={hosp.id} className="border-none shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-all group">
-              <CardHeader className="pb-2">
-                <div className="flex justify-between items-start">
-                  <div className="p-3 bg-primary/5 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
-                    <HospitalIcon className="h-6 w-6" />
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {paginatedHospitals.map((hosp) => (
+              <Card key={hosp.id} className="border-none shadow-sm rounded-3xl bg-white overflow-hidden hover:shadow-md transition-all group">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <div className="p-3 bg-primary/5 rounded-2xl text-primary group-hover:bg-primary group-hover:text-white transition-colors">
+                      <HospitalIcon className="h-6 w-6" />
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="rounded-full h-8 w-8 text-slate-300 hover:text-primary"
+                        onClick={() => handleQuickShare(hosp)}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="rounded-xl">
+                          <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(hosp)}>
+                            <Pencil className="h-4 w-4" /> 수정
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(hosp)}>
+                            <Trash2 className="h-4 w-4" /> 삭제
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="rounded-full h-8 w-8 text-slate-300 hover:text-primary"
-                      onClick={() => handleQuickShare(hosp)}
-                    >
-                      <Share2 className="h-4 w-4" />
+                  <CardTitle className="text-xl font-black mt-4 text-slate-900 line-clamp-1">{hosp.name}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 pt-2">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2.5 text-sm text-slate-500">
+                      <MapPin className="h-4 w-4 text-slate-300" />
+                      <span className="font-medium line-clamp-1">{hosp.address}</span>
+                    </div>
+                    <div className="flex items-center gap-2.5 text-sm text-slate-500">
+                      <Truck className="h-4 w-4 text-slate-300" />
+                      <span className="font-bold text-primary">{hosp.assignedDriverName || '전담 기사 없음'}</span>
+                    </div>
+                  </div>
+                  <div className="pt-4 flex gap-2">
+                    <Button variant="outline" className="flex-1 rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50" asChild>
+                      <Link href={`/admin/hospitals/${hosp.id}`}>상세 및 배정</Link>
                     </Button>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="rounded-xl">
-                        <DropdownMenuItem className="gap-2 font-bold cursor-pointer" onClick={() => handleOpenEdit(hosp)}>
-                          <Pencil className="h-4 w-4" /> 수정
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="gap-2 font-bold text-destructive cursor-pointer" onClick={() => handleOpenDelete(hosp)}>
-                          <Trash2 className="h-4 w-4" /> 삭제
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
                   </div>
-                </div>
-                <CardTitle className="text-xl font-black mt-4 text-slate-900 line-clamp-1">{hosp.name}</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4 pt-2">
-                <div className="space-y-2.5">
-                  <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                    <MapPin className="h-4 w-4 text-slate-300" />
-                    <span className="font-medium line-clamp-1">{hosp.address}</span>
-                  </div>
-                  <div className="flex items-center gap-2.5 text-sm text-slate-500">
-                    <Truck className="h-4 w-4 text-slate-300" />
-                    <span className="font-bold text-primary">{hosp.assignedDriverName || '전담 기사 없음'}</span>
-                  </div>
-                </div>
-                <div className="pt-4 flex gap-2">
-                  <Button variant="outline" className="flex-1 rounded-xl h-10 border-slate-100 text-slate-600 font-bold hover:bg-slate-50" asChild>
-                    <Link href={`/admin/hospitals/${hosp.id}`}>상세 및 배정</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          
+          <Pagination 
+            total={filteredHospitals.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
         </div>
       ) : (
         <div className="py-20 text-center border-2 border-dashed border-slate-200 rounded-3xl bg-white">

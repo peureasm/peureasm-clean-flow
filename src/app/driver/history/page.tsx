@@ -11,11 +11,16 @@ import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
 import StatusBadge from '@/components/shared/StatusBadge';
+import Pagination from '@/components/shared/Pagination';
 
 export default function DriverHistoryPage() {
   const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const [searchTerm, setSearchTerm] = useState("");
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const assignedHospitalsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -36,7 +41,7 @@ export default function DriverHistoryPage() {
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', 'in', assignedHospitalIds.slice(0, 30)),
-      limit(200)
+      limit(500)
     );
   }, [firestore, user, assignedHospitalIds]);
 
@@ -52,6 +57,11 @@ export default function DriverHistoryPage() {
 
   const ongoingList = myHistory.filter(r => ongoingStatuses.includes(r.currentStatus));
   const completedList = myHistory.filter(r => completedStatuses.includes(r.currentStatus));
+
+  // Current tab filtered and paginated
+  const [activeTab, setActiveTab] = useState("ongoing");
+  const currentList = activeTab === "ongoing" ? ongoingList : completedList;
+  const paginatedList = currentList.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   if (isUserLoading || isHospLoading) return (
     <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
@@ -75,11 +85,14 @@ export default function DriverHistoryPage() {
           className="pl-11 rounded-2xl bg-white border-border shadow-sm h-14 font-medium focus:ring-secondary" 
           placeholder="병원명 또는 날짜 검색..." 
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setCurrentPage(1);
+          }}
         />
       </div>
 
-      <Tabs defaultValue="ongoing" className="w-full">
+      <Tabs defaultValue="ongoing" className="w-full" onValueChange={(v) => { setActiveTab(v); setCurrentPage(1); }}>
         <TabsList className="grid w-full grid-cols-2 rounded-2xl bg-muted/50 p-1.5 h-14">
           <TabsTrigger value="ongoing" className="rounded-xl font-black text-sm data-[state=active]:bg-white data-[state=active]:text-secondary data-[state=active]:shadow-sm">
             진행 공정 ({ongoingList.length})
@@ -93,8 +106,8 @@ export default function DriverHistoryPage() {
           <TabsContent value="ongoing" className="m-0 space-y-4">
             {isReqLoading ? (
               <div className="text-center py-10 text-slate-300 italic">데이터 동기화 중...</div>
-            ) : ongoingList.length > 0 ? (
-              ongoingList.map((req) => <HistoryCard key={req.id} req={req} />)
+            ) : paginatedList.length > 0 ? (
+              paginatedList.map((req) => <HistoryCard key={req.id} req={req} />)
             ) : (
               <EmptyPlaceholder message="현재 진행 중인 운송 건이 없습니다." />
             )}
@@ -103,14 +116,29 @@ export default function DriverHistoryPage() {
           <TabsContent value="completed" className="m-0 space-y-4">
             {isReqLoading ? (
               <div className="text-center py-10 text-slate-300 italic">데이터 동기화 중...</div>
-            ) : completedList.length > 0 ? (
-              completedList.map((req) => <HistoryCard key={req.id} req={req} />)
+            ) : paginatedList.length > 0 ? (
+              paginatedList.map((req) => <HistoryCard key={req.id} req={req} />)
             ) : (
               <EmptyPlaceholder message="완료된 운송 이력이 없습니다." />
             )}
           </TabsContent>
         </div>
       </Tabs>
+
+      {!isReqLoading && currentList.length > 0 && (
+        <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100">
+          <Pagination 
+            total={currentList.length}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+      )}
     </div>
   );
 }

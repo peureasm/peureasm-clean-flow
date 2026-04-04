@@ -11,11 +11,16 @@ import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useFirestore, useUser, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, where, orderBy, doc } from 'firebase/firestore';
+import Pagination from '@/components/shared/Pagination';
 
 export default function HospitalRequestsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const firestore = useFirestore();
   const { user } = useUser();
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   // 사용자 프로필에서 병원 ID 가져오기
   const userDocRef = useMemoFirebase(() => {
@@ -24,7 +29,7 @@ export default function HospitalRequestsPage() {
   }, [firestore, user]);
   const { data: userData, isLoading: isUserLoading } = useDoc(userDocRef);
 
-  // 실시간 요청 데이터 구독 (병원 ID로 강력 필터링)
+  // 실시간 요청 데이터 구독
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !userData?.hospitalId) return null;
     return query(
@@ -38,13 +43,19 @@ export default function HospitalRequestsPage() {
   const filteredRequests = requests?.filter(req => 
     req.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
     req.requestDate.includes(searchTerm)
-  ) || [];
+  ).sort((a, b) => b.requestDate.localeCompare(a.requestDate)) || [];
 
   const getStatusCategory = (status: string) => {
     if (['제출', '수거완료', '공장입고', '세탁중', '건조중', '포장완료', '출고'].includes(status)) return 'ongoing';
     if (['납품완료', '병원확인완료', '종결'].includes(status)) return 'completed';
     return 'pending';
   };
+
+  // Paginated Data for each tab context (simplified here by paginating the filteredRequests)
+  const paginatedRequests = filteredRequests.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   if (isUserLoading) {
     return (
@@ -84,7 +95,10 @@ export default function HospitalRequestsPage() {
             placeholder="요청 ID 또는 날짜로 검색" 
             className="pl-10 rounded-2xl border-none shadow-sm h-12 bg-white"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
 
@@ -104,17 +118,17 @@ export default function HospitalRequestsPage() {
             ) : (
               <>
                 <TabsContent value="all" className="m-0 space-y-4">
-                  {filteredRequests.map((req) => (
+                  {paginatedRequests.map((req) => (
                     <RequestCard key={req.id} req={req} />
                   ))}
                 </TabsContent>
                 <TabsContent value="ongoing" className="m-0 space-y-4">
-                  {filteredRequests.filter(r => getStatusCategory(r.currentStatus) === 'ongoing').map((req) => (
+                  {filteredRequests.filter(r => getStatusCategory(r.currentStatus) === 'ongoing').slice((currentPage-1)*pageSize, currentPage*pageSize).map((req) => (
                     <RequestCard key={req.id} req={req} />
                   ))}
                 </TabsContent>
                 <TabsContent value="completed" className="m-0 space-y-4">
-                  {filteredRequests.filter(r => getStatusCategory(r.currentStatus) === 'completed').map((req) => (
+                  {filteredRequests.filter(r => getStatusCategory(r.currentStatus) === 'completed').slice((currentPage-1)*pageSize, currentPage*pageSize).map((req) => (
                     <RequestCard key={req.id} req={req} />
                   ))}
                 </TabsContent>
@@ -122,6 +136,21 @@ export default function HospitalRequestsPage() {
             )}
           </div>
         </Tabs>
+
+        {!isRequestsLoading && filteredRequests.length > 0 && (
+          <div className="bg-white rounded-3xl overflow-hidden shadow-sm border border-slate-100 mt-4">
+            <Pagination 
+              total={filteredRequests.length}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+              onPageSizeChange={(size) => {
+                setPageSize(size);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+        )}
 
         {!isRequestsLoading && filteredRequests.length === 0 && (
           <div className="py-20 text-center space-y-4 bg-white rounded-3xl border-2 border-dashed border-slate-100">
@@ -136,7 +165,7 @@ export default function HospitalRequestsPage() {
 
 function RequestCard({ req }: { req: any }) {
   return (
-    <Card className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all overflow-hidden bg-white">
+    <Card className="rounded-3xl border-none shadow-sm hover:shadow-md transition-all overflow-hidden bg-white ring-1 ring-slate-100">
       <CardContent className="p-0">
         <Link href={`/hospital/requests/${req.id}`} className="block p-5 space-y-4">
           <div className="flex justify-between items-start">
