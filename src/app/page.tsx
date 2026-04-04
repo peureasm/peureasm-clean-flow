@@ -1,16 +1,49 @@
 
+"use client"
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Hospital, Truck, Factory, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Hospital, Truck, Factory, ShieldCheck, ChevronRight, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function LandingPage() {
+  const router = useRouter();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
+
+  // 이미 역할이 있는 사용자는 해당 대시보드로 자동 이동
+  useEffect(() => {
+    if (!isUserLoading && !isUserDocLoading && userData?.role) {
+      router.push(`/${userData.role.toLowerCase()}`);
+    }
+  }, [userData, isUserLoading, isUserDocLoading, router]);
+
   const roles = [
     { id: 'hospital', label: '병원 담당자', desc: '세탁물 수거 요청 및 납품 확인', icon: Hospital, color: 'bg-blue-500' },
     { id: 'driver', label: '수거 기사', desc: '현장 수량 확인 및 수거/납품 관리', icon: Truck, color: 'bg-emerald-500' },
     { id: 'factory', label: '공장 관리', desc: '입고 관리 및 세탁 공정 모니터링', icon: Factory, color: 'bg-purple-500' },
     { id: 'admin', label: '시스템 관리자', desc: '분쟁 조율, 통계 및 정산 관리', icon: ShieldCheck, color: 'bg-slate-800' },
   ];
+
+  if (isUserLoading || (user && isUserDocLoading)) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-primary" />
+        <p className="font-bold text-slate-400">사용자 권한 확인 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col font-body">
@@ -37,7 +70,7 @@ export default function LandingPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
           {roles.map((role) => (
             <Link key={role.id} href={`/${role.id}`}>
-              <Card className="group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-none cursor-pointer overflow-hidden rounded-3xl">
+              <Card className="group hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 border-none cursor-pointer overflow-hidden rounded-3xl bg-white">
                 <CardContent className="p-8 flex items-center gap-6">
                   <div className={`h-16 w-16 rounded-2xl ${role.color} text-white flex items-center justify-center shrink-0 shadow-lg`}>
                     <role.icon className="h-8 w-8" />

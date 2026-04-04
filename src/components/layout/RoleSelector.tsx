@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
 import { Hospital, Truck, Factory, ShieldCheck, GripVertical, X, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, getDoc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -45,25 +45,44 @@ function RoleSelectorContent() {
   // 프로필 초기 생성 및 유지
   useEffect(() => {
     const syncUserProfile = async () => {
-      if (user && firestore && currentPathRole && !isSwitching) {
+      if (user && firestore && !isSwitching) {
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         
+        // URL 쿼리 파라미터에서 초대 정보 확인
+        const inviteId = searchParams.get('inviteId');
+        const driverInvite = searchParams.get('driverInvite');
+        const inviteName = searchParams.get('name');
+
         if (!userSnap.exists()) {
+          // 신규 유저 생성
+          const role = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
           setDocumentNonBlocking(userRef, {
             id: user.uid,
             username: user.email || `user_${user.uid.slice(0, 5)}`,
-            name: user.displayName || '사용자',
-            role: currentPathRole,
+            name: inviteName || user.displayName || '사용자',
+            role: role,
+            hospitalId: inviteId || null,
             isActive: true,
             updatedAt: serverTimestamp(),
             createdAt: serverTimestamp(),
           }, { merge: true });
+          
+          if (role) router.push(`/${role.toLowerCase()}`);
+        } else if (inviteId && userSnap.data()?.hospitalId !== inviteId) {
+          // 이미 유저가 있지만 새로운 병원 초대 링크로 들어온 경우 업데이트
+          updateDoc(userRef, {
+            hospitalId: inviteId,
+            role: 'HOSPITAL',
+            updatedAt: serverTimestamp()
+          });
+          toast({ title: "소속 병원 변경", description: "초대받은 병원으로 소속이 변경되었습니다." });
+          router.push('/hospital');
         }
       }
     };
     syncUserProfile();
-  }, [user, firestore, currentPathRole, isSwitching]);
+  }, [user, firestore, currentPathRole, isSwitching, searchParams, router, toast]);
 
   const handleRoleSwitch = async (roleId: UserRole) => {
     if (!user || !firestore) return;
@@ -85,7 +104,6 @@ function RoleSelectorContent() {
       });
     } catch (e) {
       console.error(e);
-      // 권한 부족 시 로컬 라우팅만 시도
       router.push(`/${roleId.toLowerCase()}`);
     } finally {
       setIsSwitching(false);

@@ -2,14 +2,16 @@
 "use client"
 
 import RoleSelector from '@/components/layout/RoleSelector';
-import { Factory, Kanban, PackageCheck, List } from 'lucide-react';
+import { Factory, Kanban, PackageCheck, List, ShieldAlert, Loader2 } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 export default function FactoryLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useUser();
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const pathname = usePathname();
 
@@ -18,7 +20,40 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userData } = useDoc(userDocRef);
+  const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
+
+  // 1. 로딩 상태 처리
+  if (isUserLoading || isUserDocLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
+        <p className="font-bold text-slate-400">사용자 권한 확인 중...</p>
+      </div>
+    );
+  }
+
+  // 2. 권한 체크 (FACTORY가 아닌 경우 차단)
+  if (userData && userData.role !== 'FACTORY') {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
+        <Card className="max-w-md w-full p-10 text-center space-y-6 rounded-[40px] border-none shadow-2xl bg-white">
+          <div className="h-20 w-20 bg-purple-50 rounded-full flex items-center justify-center text-purple-500 mx-auto border border-purple-100">
+            <ShieldAlert className="h-10 w-10" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-2xl font-black text-slate-900">공장 권한 없음</h1>
+            <p className="text-slate-500 font-medium leading-relaxed">
+              이 페이지는 <span className="text-purple-500 font-bold">공장 관리자</span> 권한이 필요합니다.<br/>
+              현재 '{userData.role}' 권한으로는 접근할 수 없습니다.
+            </p>
+          </div>
+          <Button asChild className="w-full h-14 rounded-2xl bg-slate-900 text-white font-bold">
+            <Link href="/">메인으로 돌아가기</Link>
+          </Button>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] font-body">
