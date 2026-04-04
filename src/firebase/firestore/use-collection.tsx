@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -65,6 +66,9 @@ export function useCollection<T = any>(
         let path = "query";
         if (memoizedTargetRefOrQuery instanceof CollectionReference) {
           path = memoizedTargetRefOrQuery.path;
+        } else if (memoizedTargetRefOrQuery && 'path' in memoizedTargetRefOrQuery) {
+          // Try to get path if it's a query that exposes it
+          path = (memoizedTargetRefOrQuery as any).path || "collectionRequests"; 
         }
 
         const contextualError = new FirestorePermissionError({
