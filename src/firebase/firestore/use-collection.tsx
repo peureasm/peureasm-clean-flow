@@ -63,12 +63,18 @@ export function useCollection<T = any>(
       },
       (firestoreError: FirestoreError) => {
         // Safe path extraction for error reporting
-        let path = "query";
-        if (memoizedTargetRefOrQuery instanceof CollectionReference) {
-          path = memoizedTargetRefOrQuery.path;
-        } else if (memoizedTargetRefOrQuery && 'path' in memoizedTargetRefOrQuery) {
-          // Try to get path if it's a query that exposes it
-          path = (memoizedTargetRefOrQuery as any).path || "collectionRequests"; 
+        // Attempts to find the collection path from various possible object structures
+        let path = "query_result";
+        const target = memoizedTargetRefOrQuery as any;
+        
+        if (target instanceof CollectionReference) {
+          path = target.path;
+        } else if (target?.path) {
+          path = target.path;
+        } else if (target?._query?.path?.segments) {
+          path = target._query.path.segments.join('/');
+        } else {
+          path = "collectionRequests"; // Default fallback based on app context
         }
 
         const contextualError = new FirestorePermissionError({
