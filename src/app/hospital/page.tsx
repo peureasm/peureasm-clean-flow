@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState } from 'react';
@@ -7,7 +8,7 @@ import { ChevronRight, Plus, Package, Clock, AlertCircle, Loader2, Sparkles } fr
 import Link from 'next/link';
 import StatusBadge from '@/components/shared/StatusBadge';
 import { useCollection, useDoc, useFirestore, useUser, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, limit, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 
 export default function HospitalDashboard() {
@@ -35,6 +36,7 @@ export default function HospitalDashboard() {
     return query(
       collection(firestore, 'collectionRequests'),
       where('hospitalId', '==', userData.hospitalId),
+      orderBy('createdAt', 'desc'),
       limit(10)
     );
   }, [firestore, userData?.hospitalId]);
@@ -65,7 +67,7 @@ export default function HospitalDashboard() {
     return (
       <div className="p-20 text-center flex flex-col items-center gap-4 bg-slate-50 min-h-screen">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />
-        <p className="text-muted-foreground font-bold">병원 정보를 동기화 중...</p>
+        <p className="font-bold text-slate-400">병원 정보를 동기화 중...</p>
       </div>
     );
   }

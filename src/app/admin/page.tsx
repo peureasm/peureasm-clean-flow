@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from 'react';
@@ -8,7 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import StatusBadge from '@/components/shared/StatusBadge';
 import { Package, Truck, AlertTriangle, ArrowRight, RefreshCw, Hospital } from 'lucide-react';
 import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
-import { collection, query, limit } from 'firebase/firestore';
+import { collection, query, limit, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function AdminDashboard() {
@@ -17,7 +18,7 @@ export default function AdminDashboard() {
 
   const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    return query(collection(firestore, 'collectionRequests'), limit(50));
+    return query(collection(firestore, 'collectionRequests'), orderBy('createdAt', 'desc'), limit(50));
   }, [firestore, user]);
 
   const hospitalsQuery = useMemoFirebase(() => {

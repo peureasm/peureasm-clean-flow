@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { MapPin, Navigation, Phone, ChevronRight, ClipboardCheck, PackageCheck, Loader2, AlertCircle, Sparkles, Truck, History, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import { useFirestore, useCollection, useMemoFirebase, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, limit, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, limit, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import StatusBadge from '@/components/shared/StatusBadge';
 
@@ -34,16 +34,18 @@ export default function DriverDashboard() {
   }, [assignedHospitals]);
 
   // 2. 수거/납품 대기 중인 요청 조회
-  const collectionQuery = useMemoFirebase(() => {
+  const requestsQuery = useMemoFirebase(() => {
     if (!firestore || !user || assignedHospitalIds.length === 0) return null;
+    // 배정된 병원들의 모든 요청을 가져옴 (상태 필터링은 클라이언트에서 수행하여 로직 간소화)
     return query(
       collection(firestore, 'collectionRequests'),
-      where('hospitalId', 'in', assignedHospitalIds.slice(0, 30)),
-      limit(100)
+      where('hospitalId', 'in', assignedHospitalIds.slice(0, 10)),
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
   }, [firestore, user, assignedHospitalIds]);
 
-  const { data: allRequests, isLoading: isReqLoading } = useCollection(collectionQuery);
+  const { data: allRequests, isLoading: isReqLoading } = useCollection(requestsQuery);
 
   const handleLinkTestDriver = () => {
     if (!firestore || !user) return;
