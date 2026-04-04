@@ -5,9 +5,9 @@ import { useEffect, useState, useRef, Suspense } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
-import { Hospital, Truck, Factory, ShieldCheck, LogIn, GripVertical, X } from 'lucide-react';
+import { Hospital, Truck, Factory, ShieldCheck, GripVertical, X, Loader2 } from 'lucide-react';
 import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking } from '@/firebase';
-import { doc, serverTimestamp, setDoc, getDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
@@ -23,6 +23,7 @@ function RoleSelectorContent() {
   const [isOpen, setIsOpen] = useState(false);
   const [position, setPosition] = useState({ x: 16, y: 16 });
   const [isDragging, setIsDragging] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
   const dragRef = useRef<{ startX: number; startY: number; startPosX: number; startPosY: number } | null>(null);
 
   const roles: { id: UserRole; label: string; icon: any; color: string }[] = [
@@ -34,54 +35,6 @@ function RoleSelectorContent() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 초대 링크 감지 및 자동 설정 (데이터 동기화 핵심 로직)
-  useEffect(() => {
-    const inviteId = searchParams.get('inviteId');
-    const driverInvite = searchParams.get('driverInvite');
-    const claimedName = searchParams.get('name');
-
-    if (user && firestore) {
-      if (inviteId) {
-        // 병원 담당자 초대 처리
-        const userRef = doc(firestore, 'users', user.uid);
-        setDoc(userRef, {
-          id: user.uid,
-          role: 'HOSPITAL',
-          hospitalId: inviteId,
-          name: claimedName || user.displayName || '병원 담당자',
-          username: user.email || `user_${user.uid.slice(0, 5)}`,
-          isActive: true,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(), // 신규 유저인 경우 생성일 설정 (기존 유저는 merge에 의해 유지됨)
-        }, { merge: true }).then(() => {
-          toast({
-            title: "병원 초대 확인됨",
-            description: `${claimedName || '담당자'}님, 환영합니다.`,
-          });
-          router.replace('/hospital');
-        });
-      } else if (driverInvite === 'true') {
-        // 기사 초대 처리
-        const userRef = doc(firestore, 'users', user.uid);
-        setDoc(userRef, {
-          id: user.uid,
-          role: 'DRIVER',
-          name: claimedName || user.displayName || '수거 기사',
-          username: user.email || `user_${user.uid.slice(0, 5)}`,
-          isActive: true,
-          updatedAt: serverTimestamp(),
-          createdAt: serverTimestamp(),
-        }, { merge: true }).then(() => {
-          toast({
-            title: "기사 초대 확인됨",
-            description: `${claimedName || '기사'}님, 환영합니다.`,
-          });
-          router.replace('/driver');
-        });
-      }
-    }
-  }, [searchParams, user, firestore, router, toast]);
-
   // 자동 익명 로그인
   useEffect(() => {
     if (!isUserLoading && !user && auth) {
@@ -92,14 +45,11 @@ function RoleSelectorContent() {
   // 프로필 초기 생성 및 유지
   useEffect(() => {
     const syncUserProfile = async () => {
-      if (user && firestore && currentPathRole) {
+      if (user && firestore && currentPathRole && !isSwitching) {
         const userRef = doc(firestore, 'users', user.uid);
         const userSnap = await getDoc(userRef);
         
-        const hasInviteParam = searchParams.has('inviteId') || searchParams.has('driverInvite');
-        
-        // 초대 파라미터가 없고 프로필이 아직 없는 경우에만 기본 프로필 생성
-        if (!userSnap.exists() && !hasInviteParam) {
+        if (!userSnap.exists()) {
           setDocumentNonBlocking(userRef, {
             id: user.uid,
             username: user.email || `user_${user.uid.slice(0, 5)}`,
@@ -113,18 +63,33 @@ function RoleSelectorContent() {
       }
     };
     syncUserProfile();
-  }, [user, firestore, currentPathRole, searchParams]);
+  }, [user, firestore, currentPathRole, isSwitching]);
 
-  const handleRoleSwitch = (roleId: UserRole) => {
-    if (user && firestore) {
-      const userRef = doc(firestore, 'users', user.uid);
-      setDoc(userRef, {
+  const handleRoleSwitch = async (roleId: UserRole) => {
+    if (!user || !firestore) return;
+    
+    setIsSwitching(true);
+    const userRef = doc(firestore, 'users', user.uid);
+    
+    try {
+      await updateDoc(userRef, {
         role: roleId,
         updatedAt: serverTimestamp(),
-      }, { merge: true });
+      });
+      
+      router.push(`/${roleId.toLowerCase()}`);
+      setIsOpen(false);
+      toast({
+        title: "역할 전환",
+        description: `사용자 권한이 [${roleId}]로 변경되었습니다.`,
+      });
+    } catch (e) {
+      console.error(e);
+      // 권한 부족 시 로컬 라우팅만 시도
+      router.push(`/${roleId.toLowerCase()}`);
+    } finally {
+      setIsSwitching(false);
     }
-    router.push(`/${roleId.toLowerCase()}`);
-    setIsOpen(false);
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
@@ -196,6 +161,7 @@ function RoleSelectorContent() {
               <Button
                 key={role.id}
                 variant={currentPathRole === role.id ? 'default' : 'outline'}
+                disabled={isSwitching}
                 className={cn(
                   "justify-start gap-3 rounded-2xl h-12 border-none transition-all",
                   currentPathRole === role.id ? "bg-primary shadow-lg shadow-primary/20" : "hover:bg-slate-50 text-slate-600"
@@ -206,7 +172,11 @@ function RoleSelectorContent() {
                   "p-1.5 rounded-lg",
                   currentPathRole === role.id ? "bg-white/20" : "bg-slate-100"
                 )}>
-                  <role.icon className={cn("h-4 w-4", currentPathRole === role.id ? "text-white" : role.color)} />
+                  {isSwitching && currentPathRole === role.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <role.icon className={cn("h-4 w-4", currentPathRole === role.id ? "text-white" : role.color)} />
+                  )}
                 </div>
                 <span className="font-bold text-sm">{role.label}</span>
                 {currentPathRole === role.id && <div className="ml-auto h-2 w-2 rounded-full bg-white animate-pulse" />}

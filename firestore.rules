@@ -3,12 +3,55 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     /**
-     * MediLaundry Flow - Prototype Security Rules
-     * 프로토타입 단계에서는 인증된 모든 사용자가 모든 데이터를 읽고 쓸 수 있도록 허용합니다.
-     * (이 규칙은 파일 저장을 통해 즉시 배포를 트리거합니다.)
+     * MediLaundry Flow - Advanced Security Rules
+     * 역할(ADMIN, HOSPITAL, DRIVER, FACTORY)에 기반한 세부 접근 제어
      */
-    match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+    
+    // 헬퍼 함수
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    function hasRole(role) {
+      return isSignedIn() && getUserData().role == role;
+    }
+    
+    function isAdmin() {
+      return hasRole('ADMIN');
+    }
+
+    // 사용자 프로필: 본인 또는 관리자만 수정 가능
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() || request.auth.uid == userId;
+    }
+
+    // 병원 마스터: 관리자만 수정 가능
+    match /hospitals/{hospitalId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 세탁 품목 마스터: 관리자만 수정 가능
+    match /laundryItems/{itemId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // 세탁 수거 요청: 모든 인증된 사용자가 읽을 수 있으나(공정 추적용), 생성/삭제는 제한됨
+    match /collectionRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && (isAdmin() || hasRole('HOSPITAL'));
+      allow update: if isSignedIn(); 
+      allow delete: if isAdmin();
+
+      match /items/{itemId} {
+        allow read, write: if isSignedIn();
+      }
     }
   }
 }
