@@ -1,8 +1,8 @@
 
 "use client"
 
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, limit } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { collection, query, limit } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { AlertTriangle, Sparkles, BrainCircuit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -12,14 +12,15 @@ import { aiDiscrepancyResolutionAssistant, AiDiscrepancyResolutionAssistantOutpu
 
 export default function AdminDiscrepanciesPage() {
   const firestore = useFirestore();
+  const { user } = useUser();
   const [isResolving, setIsResolving] = useState<string | null>(null);
   const [resolutionResult, setResolutionResult] = useState<AiDiscrepancyResolutionAssistantOutput | null>(null);
 
   const discrepancyQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
+    if (!firestore || !user) return null;
     // discrepancyReason이 존재하는 것만 필터링 (간단하게 limit로 전체 가져와서 클라이언트에서 필터링하거나 보안규칙/색인에 맞춰 조정)
     return query(collection(firestore, 'collectionRequests'), limit(50));
-  }, [firestore]);
+  }, [firestore, user]);
 
   const { data: requests, isLoading } = useCollection(discrepancyQuery);
   const issues = requests?.filter(r => r.discrepancyReason) || [];
@@ -96,7 +97,7 @@ export default function AdminDiscrepanciesPage() {
               <p className="font-bold text-primary">AI 엔진이 로그와 데이터를 분석 중입니다...</p>
             </div>
           ) : resolutionResult ? (
-            <Card className="border-none shadow-xl bg-slate-900 text-white rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4">
+            <Card key={resolutionResult.riskLevel} className="border-none shadow-xl bg-slate-900 text-white rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-4">
               <CardHeader className="bg-white/5 border-b border-white/10 flex flex-row items-center gap-2">
                 <Sparkles className="h-5 w-5 text-accent" />
                 <CardTitle className="text-sm">AI 추천 해결 프로세스</CardTitle>
