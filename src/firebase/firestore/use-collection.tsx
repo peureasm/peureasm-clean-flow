@@ -72,17 +72,18 @@ export function useCollection<T = any>(
           } else if (target?.path) {
             path = target.path;
           } else if (target?._query?.path?.segments) {
+            // Internal path segments for queries
             path = target._query.path.segments.join('/');
           } else {
-            // Fallback: try to stringify or identify common paths
-            const str = target.toString();
-            if (str.includes('collectionRequests')) path = 'collectionRequests';
+            // Fallback: try to identify by common patterns in stringified query
+            const str = target.toString().toLowerCase();
+            if (str.includes('collectionrequests')) path = 'collectionRequests';
             else if (str.includes('hospitals')) path = 'hospitals';
-            else if (str.includes('laundryItems')) path = 'laundryItems';
+            else if (str.includes('laundryitems')) path = 'laundryItems';
             else if (str.includes('users')) path = 'users';
           }
         } catch (e) {
-          path = "query_denied";
+          path = "access_denied_on_query";
         }
 
         const contextualError = new FirestorePermissionError({
