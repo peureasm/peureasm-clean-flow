@@ -66,17 +66,23 @@ export function useCollection<T = any>(
         let path = "unknown_collection";
         const target = memoizedTargetRefOrQuery as any;
         
-        if (target instanceof CollectionReference) {
-          path = target.path;
-        } else if (target?.path) {
-          path = target.path;
-        } else if (target?._query?.path?.segments) {
-          // Query 객체에서 경로 세그먼트 추출
-          path = target._query.path.segments.join('/');
-        } else if (typeof target?.toString === 'function') {
-          // 마지막 수단으로 toString 확인 (예: collectionRequests)
-          const str = target.toString();
-          if (str.includes('collectionRequests')) path = 'collectionRequests';
+        try {
+          if (target instanceof CollectionReference) {
+            path = target.path;
+          } else if (target?.path) {
+            path = target.path;
+          } else if (target?._query?.path?.segments) {
+            path = target._query.path.segments.join('/');
+          } else {
+            // Fallback: try to stringify or identify common paths
+            const str = target.toString();
+            if (str.includes('collectionRequests')) path = 'collectionRequests';
+            else if (str.includes('hospitals')) path = 'hospitals';
+            else if (str.includes('laundryItems')) path = 'laundryItems';
+            else if (str.includes('users')) path = 'users';
+          }
+        } catch (e) {
+          path = "query_denied";
         }
 
         const contextualError = new FirestorePermissionError({

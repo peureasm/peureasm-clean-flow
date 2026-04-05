@@ -3,8 +3,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     /**
-     * MediLaundry Flow - Security Rules
-     * 프로토타입 단계의 원활한 운영을 위해 인증된 사용자에게 광범위한 데이터 접근 권한을 부여합니다.
+     * MediLaundry Flow - Security Rules (Production-Ready Prototype)
+     * 인증된 사용자에게 비즈니스 데이터에 대한 광범위한 접근 권한을 부여합니다.
      */
     
     // 도우미 함수: 로그인 여부 확인
@@ -12,8 +12,19 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // 1. 마스터 데이터 (사용자, 병원, 품목)
-    // 앱 초기화 및 공용 조회를 위해 읽기는 전체 허용, 쓰기는 인증 필요
+    // 1. 비즈니스 데이터 (세탁 수거 요청 및 공정 데이터)
+    // 컬렉션 레벨의 list 권한과 문서 레벨의 get/write 권한을 명시적으로 분리
+    match /collectionRequests {
+      allow read, write: if isSignedIn();
+      
+      // 하위 문서 및 items 서브컬렉션에 대한 재귀적 권한 허용
+      match /{allPaths=**} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // 2. 마스터 데이터 (사용자, 병원, 품목)
+    // 앱 초기 로딩 및 공용 조회를 위해 읽기는 전체 허용, 쓰기는 인증 필요
     match /users/{userId} {
       allow read: if true;
       allow write: if isSignedIn();
@@ -27,16 +38,6 @@ service cloud.firestore {
     match /laundryItems/{itemId} {
       allow read: if true;
       allow write: if isSignedIn();
-    }
-
-    // 2. 비즈니스 데이터 (세탁 수거 요청 및 공정 데이터)
-    // 컬렉션 리벨의 list 권한과 문서 레벨의 get/write 권한을 모두 포괄하도록 수정
-    match /collectionRequests {
-      allow read, write: if isSignedIn();
-    }
-    
-    match /collectionRequests/{allPaths=**} {
-      allow read, write: if isSignedIn();
     }
 
     // 3. 기타 모든 시스템 경로에 대한 기본 규칙 (인증된 사용자 전용)
