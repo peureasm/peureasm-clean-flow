@@ -27,15 +27,23 @@ function UserProfileSyncInner() {
     const inviteId = searchParams.get('inviteId');
     const driverInvite = searchParams.get('driverInvite');
     const inviteName = searchParams.get('name');
+    const requestedRoleParam = (searchParams.get('requestedRole') || '').toUpperCase();
+    const requestedRole: UserRole | null =
+      requestedRoleParam === 'HOSPITAL' || requestedRoleParam === 'DRIVER' || requestedRoleParam === 'FACTORY' || requestedRoleParam === 'ADMIN'
+        ? (requestedRoleParam as UserRole)
+        : null;
 
     if (!userData) {
-      let defaultRole: UserRole = inviteId
+      // 신규 가입 직후에는 역할(권한) 배정 전 상태를 허용한다.
+      // - 초대 링크(병원/기사) 또는 관리자 이메일이면 즉시 role 부여
+      // - 그 외에는 role을 비워두고(PENDING 상태) 승인 대기 화면으로 유도
+      let defaultRole: UserRole | null = inviteId
         ? 'HOSPITAL'
         : driverInvite
           ? 'DRIVER'
           : isAdminEmail(user.email)
             ? 'ADMIN'
-            : 'HOSPITAL';
+            : null;
 
       setDocumentNonBlocking(
         userRef,
@@ -44,6 +52,7 @@ function UserProfileSyncInner() {
           username: user.email || `user_${user.uid.slice(0, 8)}`,
           name: inviteName || user.displayName || '신규 사용자',
           role: defaultRole,
+          roleRequested: defaultRole ?? requestedRole ?? 'HOSPITAL',
           hospitalId: inviteId || null,
           isActive: true,
           updatedAt: serverTimestamp(),

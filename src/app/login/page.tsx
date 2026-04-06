@@ -12,11 +12,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Hospital, Loader2, LogIn, UserPlus, ShieldCheck, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import type { UserRole } from '@/app/lib/types';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [requestedRole, setRequestedRole] = useState<UserRole>('HOSPITAL');
   const auth = useAuth();
   const { user, userData, isUserLoading, userError } = useUser();
   const router = useRouter();
@@ -28,6 +31,11 @@ export default function LoginPage() {
     if (!user) return;
     if (userData?.role) {
       router.replace(`/${userData.role.toLowerCase()}`);
+      return;
+    }
+    // 프로필은 있으나 역할이 없는 경우: 승인 대기 화면
+    if (userData && !userData.role) {
+      router.replace('/pending');
     }
   }, [user, userData, isUserLoading, router]);
 
@@ -65,7 +73,9 @@ export default function LoginPage() {
     
     try {
       await initiateEmailSignUp(auth, email, password);
-      toast({ title: "회원가입 완료", description: "프로필이 준비되면 부여된 권한에 맞는 대시보드로 연결됩니다." });
+      toast({ title: "회원가입 완료", description: "권한 승인 대기 화면으로 이동합니다." });
+      // UserProfileSync가 searchParams를 읽어 roleRequested를 저장할 수 있게 즉시 pending으로 이동
+      router.replace(`/pending?requestedRole=${requestedRole}`);
     } catch (error: any) {
       let message = "가입 중 오류가 발생했습니다.";
       if (error.code === 'auth/email-already-in-use') message = "이미 등록된 이메일 주소입니다.";
@@ -240,6 +250,23 @@ export default function LoginPage() {
                         onChange={(e) => setPassword(e.target.value)}
                         required 
                       />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">요청 역할</Label>
+                      <Select value={requestedRole} onValueChange={(v) => setRequestedRole(v as UserRole)}>
+                        <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-black">
+                          <SelectValue placeholder="역할 선택" />
+                        </SelectTrigger>
+                        <SelectContent className="rounded-xl font-black">
+                          <SelectItem value="HOSPITAL">HOSPITAL (병원)</SelectItem>
+                          <SelectItem value="DRIVER">DRIVER (기사)</SelectItem>
+                          <SelectItem value="FACTORY">FACTORY (공장)</SelectItem>
+                          <SelectItem value="ADMIN">ADMIN (관리자)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-[11px] text-slate-500 font-medium">
+                        선택한 역할은 <span className="font-black">승인 요청</span>으로 저장됩니다. 실제 권한은 관리자가 부여합니다.
+                      </p>
                     </div>
                     <Button type="submit" className="w-full h-14 rounded-2xl text-lg font-black gap-2 shadow-xl shadow-primary/20" disabled={isLoading}>
                       {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <UserPlus className="h-5 w-5" />}

@@ -39,6 +39,12 @@ export default function DriverLayout({ children }: { children: React.ReactNode }
     );
   }
 
+  // 역할 배정 전(승인 대기)
+  if (userData && !userData.role) {
+    router.push('/pending');
+    return null;
+  }
+
   // 권한 체크
   if (userData && userData.role !== 'DRIVER') {
     return (

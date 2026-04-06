@@ -1,7 +1,8 @@
 
 "use client"
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -12,17 +13,39 @@ import { Badge } from '@/components/ui/badge';
 import { 
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue 
 } from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { 
-  Search, Users, ShieldCheck, Mail, Loader2, UserCog, Check, XCircle, MoreVertical
+  Search, Users, Loader2, Check, XCircle, Sparkles
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Pagination from '@/components/shared/Pagination';
 import { UserRole } from '@/app/lib/types';
+import AdminHospitalsPanel from '@/app/admin/users/panels/AdminHospitalsPanel';
+import AdminDriversPanel from '@/app/admin/users/panels/AdminDriversPanel';
 
 export default function AdminUsersPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
+  const [viewMode, setViewMode] = useState<'all' | 'pending'>('all');
+  const [confirm, setConfirm] = useState<null | { userId: string; role: UserRole; kind: 'set' | 'approve' }>(null);
+  const tab = useMemo<'users' | 'hospitals' | 'drivers'>(() => {
+    const t = (searchParams.get('tab') || 'users').toLowerCase();
+    if (t === 'hospitals') return 'hospitals';
+    if (t === 'drivers') return 'drivers';
+    return 'users';
+  }, [searchParams]);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -35,11 +58,19 @@ export default function AdminUsersPage() {
 
   const { data: users, isLoading } = useCollection(usersQuery);
 
-  const filteredUsers = users?.filter(user => 
-    user.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.role?.toLowerCase().includes(searchTerm.toLowerCase())
-  ) || [];
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const pendingUsers = (users || []).filter((u) => !u.role);
+
+  const filteredUsers = (users || []).filter(user => {
+    if (viewMode === 'pending' && user.role) return false;
+    if (!normalizedSearch) return true;
+    return (
+      user.name?.toLowerCase().includes(normalizedSearch) ||
+      user.username?.toLowerCase().includes(normalizedSearch) ||
+      String(user.role || 'PENDING').toLowerCase().includes(normalizedSearch) ||
+      String(user.roleRequested || '').toLowerCase().includes(normalizedSearch)
+    );
+  });
 
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * pageSize,
@@ -50,11 +81,25 @@ export default function AdminUsersPage() {
     if (!firestore) return;
     updateDocumentNonBlocking(doc(firestore, 'users', userId), {
       role: newRole,
+      roleRequested: newRole,
       updatedAt: new Date().toISOString()
     });
     toast({
       title: "권한 변경 완료",
       description: `사용자의 역할이 [${newRole}]으로 업데이트되었습니다.`,
+    });
+  };
+
+  const handleApproveRequested = (userId: string, requested: UserRole) => {
+    if (!firestore) return;
+    updateDocumentNonBlocking(doc(firestore, 'users', userId), {
+      role: requested,
+      roleRequested: requested,
+      updatedAt: new Date().toISOString(),
+    });
+    toast({
+      title: "승인 완료",
+      description: `요청 역할 [${requested}]로 승인했습니다.`,
     });
   };
 
@@ -70,24 +115,101 @@ export default function AdminUsersPage() {
     });
   };
 
+  const confirmApply = () => {
+    if (!confirm) return;
+    if (confirm.kind === 'approve') handleApproveRequested(confirm.userId, confirm.role);
+    else handleRoleChange(confirm.userId, confirm.role);
+    setConfirm(null);
+  };
+
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-black tracking-tight text-slate-900">사용자 및 권한 관리</h1>
-        <p className="text-muted-foreground font-medium">시스템에 가입된 모든 사용자의 역할과 활성화 상태를 관리합니다.</p>
+        <p className="text-muted-foreground font-medium">가입자/권한, 병원 마스터, 기사 프로필을 한 화면에서 관리합니다.</p>
       </div>
 
-      <div className="relative max-w-md">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-        <Input 
-          className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium" 
-          placeholder="이름, 이메일, 역할 검색..." 
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setCurrentPage(1);
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={tab === 'users' ? 'default' : 'outline'}
+          className="h-11 rounded-xl font-black"
+          onClick={() => {
+            router.replace('/admin/users?tab=users');
           }}
-        />
+        >
+          사용자/권한
+        </Button>
+        <Button
+          variant={tab === 'hospitals' ? 'default' : 'outline'}
+          className="h-11 rounded-xl font-black"
+          onClick={() => {
+            router.replace('/admin/users?tab=hospitals');
+          }}
+        >
+          병원 관리
+        </Button>
+        <Button
+          variant={tab === 'drivers' ? 'default' : 'outline'}
+          className="h-11 rounded-xl font-black"
+          onClick={() => {
+            router.replace('/admin/users?tab=drivers');
+          }}
+        >
+          기사 관리
+        </Button>
+      </div>
+
+      {tab === 'hospitals' && (
+        <div className="pt-2">
+          <AdminHospitalsPanel />
+        </div>
+      )}
+
+      {tab === 'drivers' && (
+        <div className="pt-2">
+          <AdminDriversPanel />
+        </div>
+      )}
+
+      {tab === 'users' && (
+      <>
+      <div className="flex flex-col lg:flex-row lg:items-center gap-3">
+        <div className="relative max-w-md w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input 
+            className="w-full pl-10 rounded-xl bg-white border-none shadow-sm h-12 text-sm focus:ring-2 focus:ring-primary/20 outline-none font-medium" 
+            placeholder="이름, 이메일, 역할/요청 역할 검색..." 
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Button
+            variant={viewMode === 'all' ? 'default' : 'outline'}
+            className="h-12 rounded-xl font-black"
+            onClick={() => {
+              setViewMode('all');
+              setCurrentPage(1);
+            }}
+          >
+            전체
+          </Button>
+          <Button
+            variant={viewMode === 'pending' ? 'default' : 'outline'}
+            className="h-12 rounded-xl font-black gap-2"
+            onClick={() => {
+              setViewMode('pending');
+              setCurrentPage(1);
+            }}
+          >
+            승인 대기
+            <Badge className="bg-white/20 text-white border-white/20 font-black">{pendingUsers.length}</Badge>
+          </Button>
+        </div>
       </div>
 
       <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
@@ -124,14 +246,27 @@ export default function AdminUsersPage() {
                         </div>
                       </TableCell>
                       <TableCell className="py-4">
-                        <Badge variant="outline" className={`font-bold text-[10px] border-none px-2.5 py-1 ${
-                          user.role === 'ADMIN' ? 'bg-slate-900 text-white' :
-                          user.role === 'HOSPITAL' ? 'bg-blue-50 text-blue-600' :
-                          user.role === 'DRIVER' ? 'bg-emerald-50 text-emerald-600' :
-                          'bg-purple-50 text-purple-600'
-                        }`}>
-                          {user.role}
-                        </Badge>
+                        {user.role ? (
+                          <Badge variant="outline" className={`font-bold text-[10px] border-none px-2.5 py-1 ${
+                            user.role === 'ADMIN' ? 'bg-slate-900 text-white' :
+                            user.role === 'HOSPITAL' ? 'bg-blue-50 text-blue-600' :
+                            user.role === 'DRIVER' ? 'bg-emerald-50 text-emerald-600' :
+                            'bg-purple-50 text-purple-600'
+                          }`}>
+                            {user.role}
+                          </Badge>
+                        ) : (
+                          <div className="space-y-1">
+                            <Badge variant="outline" className="font-black text-[10px] border-none px-2.5 py-1 bg-amber-50 text-amber-700">
+                              PENDING
+                            </Badge>
+                            {user.roleRequested && (
+                              <p className="text-[10px] text-slate-400 font-bold">
+                                요청: {String(user.roleRequested)}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="py-4 text-xs font-medium text-slate-500">
                         {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : '-'}
@@ -149,12 +284,22 @@ export default function AdminUsersPage() {
                       </TableCell>
                       <TableCell className="text-right pr-8">
                         <div className="flex items-center justify-end gap-2">
+                          {!user.role && user.roleRequested && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="rounded-xl h-9 text-xs font-black gap-1.5 border-amber-200 text-amber-700 hover:bg-amber-50"
+                              onClick={() => setConfirm({ userId: user.id, role: user.roleRequested as UserRole, kind: 'approve' })}
+                            >
+                              <Sparkles className="h-3.5 w-3.5" /> 요청으로 승인
+                            </Button>
+                          )}
                           <Select 
-                            value={user.role} 
-                            onValueChange={(val) => handleRoleChange(user.id, val as UserRole)}
+                            value={user.role ?? ''} 
+                            onValueChange={(val) => setConfirm({ userId: user.id, role: val as UserRole, kind: 'set' })}
                           >
                             <SelectTrigger className="h-9 w-[120px] rounded-xl border-slate-200 text-xs font-bold bg-white">
-                              <SelectValue />
+                              <SelectValue placeholder={user.role ? '역할' : '승인(역할)'} />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl font-bold">
                               <SelectItem value="ADMIN">ADMIN</SelectItem>
@@ -197,6 +342,29 @@ export default function AdminUsersPage() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!confirm} onOpenChange={(open) => !open && setConfirm(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="font-black">권한 변경 확인</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium">
+              {confirm?.kind === 'approve'
+                ? `요청 역할 [${confirm?.role}]로 승인하시겠습니까?`
+                : `사용자 역할을 [${confirm?.role}]로 변경하시겠습니까?`}
+              <br />
+              변경 즉시 해당 사용자에게 적용됩니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="rounded-xl font-black">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmApply} className="rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800">
+              확인
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      </>
+      )}
     </div>
   );
 }

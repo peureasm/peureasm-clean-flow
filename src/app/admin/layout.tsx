@@ -29,6 +29,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
+  // 역할 배정 전(승인 대기)
+  if (userData && !userData.role) {
+    router.push('/pending');
+    return null;
+  }
+
   // 권한 체크
   if (userData && userData.role !== 'ADMIN') {
     return (
@@ -100,8 +106,6 @@ function AdminSidebar() {
 
   const menuItems = [
     { href: '/admin', icon: LayoutDashboard, label: '대시보드' },
-    { href: '/admin/hospitals', icon: Hospital, label: '병원 관리' },
-    { href: '/admin/drivers', icon: Truck, label: '기사 관리' },
     { href: '/admin/items', icon: ListIcon, label: '품목 관리' },
     { href: '/admin/users', icon: Users, label: '사용자/권한 관리' },
     { href: '/admin/requests', icon: ClipboardList, label: '전체 요청 내역' },
