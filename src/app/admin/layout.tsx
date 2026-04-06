@@ -1,7 +1,6 @@
 
 "use client"
 
-import RoleSelector from '@/components/layout/RoleSelector';
 import { SidebarProvider, SidebarInset, Sidebar, SidebarContent, SidebarHeader, SidebarMenu, SidebarMenuItem, SidebarMenuButton, SidebarTrigger } from '@/components/ui/sidebar';
 import { LayoutDashboard, Hospital, Settings, ClipboardList, AlertCircle, BarChart3, LogOut, Package, Truck, ListIcon, Users, ShieldAlert, Loader2, CreditCard } from 'lucide-react';
 import Link from 'next/link';
@@ -30,7 +29,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     );
   }
 
-  // 2. 권한 체크 (userData가 로드된 후 Role 확인)
+  // 권한 체크
   if (userData && userData.role !== 'ADMIN') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
@@ -83,7 +82,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           {children}
         </div>
       </SidebarInset>
-      <RoleSelector />
     </SidebarProvider>
   );
 }

@@ -1,7 +1,6 @@
 
 "use client"
 
-import RoleSelector from '@/components/layout/RoleSelector';
 import { Factory, Kanban, PackageCheck, List, ShieldAlert, Loader2, LogOut } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -25,14 +24,12 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
 
   const { data: userData, isLoading: isUserDocLoading } = useDoc(userDocRef);
 
-  // 1. 미인증 사용자 처리 (useEffect 내에서 안전하게 이동)
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
 
-  // 로딩 상태 처리
   if (isUserLoading || isUserDocLoading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
@@ -42,7 +39,7 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  // 3. 권한 체크 (FACTORY가 아닌 경우 차단)
+  // 권한 체크
   if (userData && userData.role !== 'FACTORY') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
@@ -100,7 +97,6 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
       <main className="p-4 sm:p-8">
         {children}
       </main>
-      <RoleSelector />
     </div>
   );
 }

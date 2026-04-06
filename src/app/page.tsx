@@ -27,7 +27,8 @@ export default function LandingPage() {
     { id: 'admin', label: '시스템 관리자', desc: '분쟁 조율, 통계 및 정산 관리', icon: ShieldCheck, color: 'bg-slate-800' },
   ];
 
-  if (isUserLoading) {
+  // 로그인 상태인데 아직 권한 데이터가 로딩 중이거나 리다이렉트 전인 경우 로딩 표시
+  if (isUserLoading || (user && !userData?.role)) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 gap-4">
         <Loader2 className="h-10 w-10 animate-spin text-primary" />

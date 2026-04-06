@@ -1,7 +1,6 @@
 
 "use client"
 
-import RoleSelector from '@/components/layout/RoleSelector';
 import { Hospital, LayoutDashboard, ClipboardList, PlusCircle, Settings, ShieldAlert, Loader2, LogOut } from 'lucide-react';
 import { useUser, useFirestore, useDoc, useMemoFirebase, useAuth, initiateSignOut } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -32,14 +31,12 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
 
   const { data: hospital } = useDoc(hospitalRef);
 
-  // 1. 미인증 사용자 처리 (useEffect 내에서 안전하게 이동)
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
 
-  // 로딩 상태 처리
   if (isUserLoading || isUserDocLoading || !user) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
@@ -49,7 +46,7 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
     );
   }
 
-  // 3. 권한 체크 (HOSPITAL이 아닌 경우 차단)
+  // 권한 체크
   if (userData && userData.role !== 'HOSPITAL') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
@@ -111,8 +108,6 @@ export default function HospitalLayout({ children }: { children: React.ReactNode
         <NavItem href="/hospital/new" icon={PlusCircle} label="신청" active={pathname === '/hospital/new'} />
         <NavItem href="/hospital/settings" icon={Settings} label="관리" active={pathname === '/hospital/settings'} />
       </nav>
-      
-      <RoleSelector />
     </div>
   );
 }
