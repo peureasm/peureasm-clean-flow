@@ -15,7 +15,6 @@ function RoleSelectorContent() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const auth = useAuth();
   const firestore = useFirestore();
   const { user, userData, isUserLoading } = useUser();
   const { toast } = useToast();
@@ -33,59 +32,56 @@ function RoleSelectorContent() {
     { id: 'ADMIN', label: '총괄관리자', icon: ShieldCheck, color: 'text-slate-800' },
   ];
 
-  const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
-
-  // 프로필 초기 생성 및 초대 정보 동기화
+  // 프로필 초기 생성 및 초대 정보 동기화 로직 전용 Effect
   useEffect(() => {
     const syncUserProfile = async () => {
-      // 로그인이 되어 있고, 로딩 중이 아닐 때만 실행
-      if (user && firestore && !isSwitching && !isUserLoading) {
-        const userRef = doc(firestore, 'users', user.uid);
-        
-        const inviteId = searchParams.get('inviteId');
-        const driverInvite = searchParams.get('driverInvite');
-        const inviteName = searchParams.get('name');
+      // 1. 로그인 상태 확인 (로그아웃 루프 방지)
+      if (!user || !firestore || isUserLoading || isSwitching) return;
 
-        // 데이터가 아예 없는 신규 유저인 경우 프로필 생성
-        if (!userData) {
-          const defaultRole = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
-          
-          setDocumentNonBlocking(userRef, {
-            id: user.uid,
-            username: user.email || `anon_${user.uid.slice(0, 5)}`,
-            name: inviteName || user.displayName || '신규 사용자',
-            role: defaultRole,
-            hospitalId: inviteId || null,
-            isActive: true,
-            updatedAt: serverTimestamp(),
-            createdAt: serverTimestamp(),
-          }, { merge: true });
-          
-          // 신규 유저이면서 루트 경로에 있다면 대시보드로 이동
-          if (pathname === '/') {
-            router.push(`/${defaultRole.toLowerCase()}`);
-          }
-        } 
-        // 기존 유저가 초대 링크로 들어온 경우 업데이트
-        else if (inviteId && userData.hospitalId !== inviteId) {
-          updateDocumentNonBlocking(userRef, {
-            hospitalId: inviteId,
-            role: 'HOSPITAL',
-            updatedAt: serverTimestamp()
-          });
-          toast({ 
-            title: "소속 정보 업데이트", 
-            description: `${inviteName || '병원'}의 담당자로 소속이 변경되었습니다.`,
-          });
-          router.push('/hospital');
-        }
+      const userRef = doc(firestore, 'users', user.uid);
+      const inviteId = searchParams.get('inviteId');
+      const driverInvite = searchParams.get('driverInvite');
+      const inviteName = searchParams.get('name');
+
+      // 2. 신규 사용자 프로필 생성
+      if (!userData) {
+        const defaultRole = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : 'HOSPITAL');
+        
+        setDocumentNonBlocking(userRef, {
+          id: user.uid,
+          username: user.email || `anon_${user.uid.slice(0, 5)}`,
+          name: inviteName || user.displayName || '신규 사용자',
+          role: defaultRole,
+          hospitalId: inviteId || null,
+          isActive: true,
+          updatedAt: serverTimestamp(),
+          createdAt: serverTimestamp(),
+        }, { merge: true });
+        
+        console.log(`[RoleSelector] New profile created for ${user.uid} with role ${defaultRole}`);
+      } 
+      // 3. 초대 링크를 통한 소속 업데이트 (HOSPITAL 한정)
+      else if (inviteId && userData.hospitalId !== inviteId) {
+        updateDocumentNonBlocking(userRef, {
+          hospitalId: inviteId,
+          role: 'HOSPITAL',
+          updatedAt: serverTimestamp()
+        });
+        
+        toast({ 
+          title: "소속 정보 업데이트", 
+          description: `${inviteName || '병원'}의 담당자로 소속이 변경되었습니다.`,
+        });
+        
+        if (pathname !== '/hospital') router.push('/hospital');
       }
     };
+
     syncUserProfile();
-  }, [user, userData, isUserLoading, firestore, isSwitching, searchParams, router, toast, pathname, currentPathRole]);
+  }, [user, userData, isUserLoading, firestore, searchParams, toast]);
 
   const handleRoleSwitch = async (roleId: UserRole) => {
-    if (!user || !firestore) return;
+    if (!user || !firestore || isSwitching) return;
     
     setIsSwitching(true);
     const userRef = doc(firestore, 'users', user.uid);
@@ -96,12 +92,14 @@ function RoleSelectorContent() {
         updatedAt: serverTimestamp(),
       });
       
-      router.push(`/${roleId.toLowerCase()}`);
-      setIsOpen(false);
+      // 전환 알림 및 이동
       toast({
         title: "권한 전환 완료",
         description: `사용자 권한이 [${roleId}] 모드로 변경되었습니다.`,
       });
+      
+      router.push(`/${roleId.toLowerCase()}`);
+      setIsOpen(false);
     } catch (e) {
       console.error(e);
     } finally {
@@ -141,6 +139,7 @@ function RoleSelectorContent() {
     };
   }, [isDragging]);
 
+  // 로그인 페이지나 유저가 없을 때는 렌더링하지 않음
   if (pathname === '/login' || !user) return null;
 
   return (
@@ -219,7 +218,7 @@ function RoleSelectorContent() {
           <div className="mt-4 p-4 rounded-2xl bg-blue-50/50 border border-blue-100 flex gap-3 items-start">
             <Sparkles className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
             <p className="text-[10px] text-blue-700/80 font-medium leading-relaxed">
-              역할을 선택하면 <span className="font-bold">Firestore</span> 프로필이 즉시 업데이트되며 해당 대시보드로 자동 이동합니다.
+              프로토타입 테스트를 위해 역할을 자유롭게 전환할 수 있습니다. 전환 시 대시보드가 자동으로 이동합니다.
             </p>
           </div>
         </div>
