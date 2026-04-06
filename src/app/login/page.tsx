@@ -158,7 +158,7 @@ export default function LoginPage() {
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between items-center px-1">
-                        <Label htmlFor="login-password" ***REMOVED***="text-[10px] font-black text-slate-400 uppercase tracking-widest">비밀번호</Label>
+                        <Label htmlFor="login-password" className="text-[10px] font-black text-slate-400 uppercase tracking-widest">비밀번호</Label>
                         <Button variant="link" className="text-[10px] p-0 h-auto font-bold text-primary" type="button">비밀번호 찾기</Button>
                       </div>
                       <Input 
@@ -193,7 +193,7 @@ export default function LoginPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="signup-password" ***REMOVED***="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">비밀번호 설정</Label>
+                      <Label htmlFor="signup-password" className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">비밀번호 설정</Label>
                       <Input 
                         id="signup-password" 
                         type="password" 
