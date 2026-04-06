@@ -1,4 +1,4 @@
-# **App Name**: MediLaundry Flow
+# **App Name**: Clean-flow
 
 ## Core Features:
 

@@ -59,7 +59,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <header className="flex h-16 shrink-0 items-center gap-4 border-b bg-white px-4 sm:px-8 soft-shadow z-10">
           <SidebarTrigger className="-ml-1 md:hidden" />
           <div className="flex-1">
-            <h2 className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-[0.2em] line-clamp-1">MediLaundry Flow System</h2>
+            <h2 className="text-[10px] sm:text-xs font-black text-muted-foreground uppercase tracking-[0.2em] line-clamp-1">Clean-flow System</h2>
           </div>
           <div className="flex items-center gap-3 sm:gap-6">
             <div className="relative cursor-pointer hover:opacity-70 transition-opacity hidden sm:block">

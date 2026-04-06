@@ -6,7 +6,7 @@ import { FirebaseClientProvider } from '@/firebase/client-provider';
 import RoleSelector from '@/components/layout/RoleSelector';
 
 export const metadata: Metadata = {
-  title: 'MediLaundry Flow | 병원 세탁물 통합 관리 시스템',
+  title: 'Clean-flow | 병원 세탁물 통합 관리 시스템',
   description: '병원-기사-공장을 잇는 스마트 세탁물 수거 및 공정 관리 솔루션',
 };
 

@@ -119,7 +119,7 @@ export default function LoginPage() {
               <span className="text-emerald-400 underline decoration-emerald-400/30">디지털 워크플로우</span>로.
             </h1>
             <p className="text-lg text-slate-300 font-medium leading-relaxed">
-              MediLaundry Flow는 병원, 물류, 공장을 하나의 실시간 네트워크로 연결하여 오차 없는 자산 관리를 실현합니다.
+              Clean-flow는 병원, 물류, 공장을 하나의 실시간 네트워크로 연결하여 오차 없는 자산 관리를 실현합니다.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-6 pt-8">
@@ -250,7 +250,7 @@ export default function LoginPage() {
           </Card>
 
           <div className="flex flex-col items-center gap-4 pt-4">
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Powered by MediLaundry Flow System</p>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-tighter">Powered by Clean-flow System</p>
             <div className="flex gap-6">
               <Button variant="link" className="text-[10px] text-slate-400 font-bold p-0">이용약관</Button>
               <Button variant="link" className="text-[10px] text-slate-400 font-bold p-0">개인정보처리방침</Button>

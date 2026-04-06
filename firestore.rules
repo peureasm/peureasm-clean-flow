@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     /**
-     * MediLaundry Flow - Advanced Security Rules
+     * Clean-flow - Advanced Security Rules
      */
     
     // 도우미 함수: 로그인 여부 확인

@@ -39,8 +39,17 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
     );
   }
 
+  if (!userData) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-slate-50 gap-4">
+        <Loader2 className="h-10 w-10 animate-spin text-purple-600" />
+        <p className="font-bold text-slate-400">프로필 정보를 불러오는 중...</p>
+      </div>
+    );
+  }
+
   // 권한 체크
-  if (userData && userData.role !== 'FACTORY') {
+  if (userData.role !== 'FACTORY') {
     return (
       <div className="flex items-center justify-center min-h-screen bg-slate-50 p-8">
         <Card className="max-w-md w-full p-10 text-center space-y-6 rounded-[40px] border-none shadow-2xl bg-white">
@@ -74,7 +83,7 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
       <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-white px-4 sm:px-8 shadow-sm">
         <Link href="/factory" className="flex items-center gap-2 font-bold text-purple-700">
           <Factory className="h-6 w-6" />
-          <span className="text-xl tracking-tight">MediLaundry <span className="text-slate-800">Factory</span></span>
+          <span className="text-xl tracking-tight">Clean-flow</span>
         </Link>
         <div className="ml-8 hidden md:flex gap-6 items-center">
           <NavLink href="/factory" icon={Kanban} label="공정 보드" active={pathname === '/factory'} />

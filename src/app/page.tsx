@@ -111,7 +111,7 @@ export default function LandingPage() {
 
         <div className="w-full pt-12 border-t border-slate-200 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-slate-400 text-sm font-bold tracking-tight">
-            © 2024 MediLaundry Flow System. <span className="text-slate-300">All rights reserved.</span>
+            © 2024 Clean-flow System. <span className="text-slate-300">All rights reserved.</span>
           </p>
           <div className="flex gap-8">
             <Button variant="link" className="text-xs text-slate-400 font-bold p-0">Service Guide</Button>

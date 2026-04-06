@@ -1,7 +1,7 @@
-# MediLaundry Flow Project AI Rules
+# Clean-flow Project AI Rules
 
 ## 1. Product (제품 정의)
-- **명칭**: MediLaundry Flow (메디런드리 플로우)
+- **명칭**: Clean-flow (메디런드리 플로우)
 - **목적**: 병원 세탁물 수거·세탁·납품 전 과정을 관리하는 통합 시스템.
 - **특징**: RFID나 바코드 없이 병원 담당자의 직접 입력과 기사/공장의 단계별 확인 수량을 대조하는 방식으로 운영.
 

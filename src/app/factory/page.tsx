@@ -107,8 +107,8 @@ export default function FactoryKanban() {
                     <CardContent className="p-4 space-y-3">
                       <div className="flex justify-between items-start">
                         <div className="space-y-0.5">
-                          <h3 className="font-bold text-sm text-slate-800 line-clamp-1">{req.hospitalName}</h3>
-                          <p className="text-[10px] text-slate-400 font-mono">#{req.id.slice(-6).toUpperCase()}</p>
+                          <h3 className="font-bold text-sm text-slate-800 line-clamp-1">{req.hospitalName ?? '—'}</h3>
+                          <p className="text-[10px] text-slate-400 font-mono">#{(req.id ?? '').slice(-6).toUpperCase() || '------'}</p>
                         </div>
                         {req.isContaminated && (
                           <Badge variant="destructive" className="h-5 px-1.5 text-[9px] bg-red-50 text-red-600 border-red-100">오염물</Badge>
@@ -124,7 +124,13 @@ export default function FactoryKanban() {
 
                       <div className="pt-3 border-t border-slate-50 flex justify-between items-center">
                         <span className="text-[10px] text-slate-400 italic">
-                          {new Date(req.updatedAt || req.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {(() => {
+                            const t = req.updatedAt || req.createdAt;
+                            const d = t ? new Date(t) : null;
+                            return d && !Number.isNaN(d.getTime())
+                              ? d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                              : '—';
+                          })()}
                         </span>
                         {idx < columns.length - 1 && (
                           <Button 
