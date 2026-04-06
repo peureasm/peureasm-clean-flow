@@ -3,13 +3,13 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp } from '@/firebase';
+import { useAuth, useUser, initiateEmailSignIn, initiateEmailSignUp, initiateAnonymousSignIn } from '@/firebase';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Hospital, Loader2, LogIn, UserPlus, ShieldCheck, KeyRound, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Hospital, Loader2, LogIn, UserPlus, ShieldCheck, Sparkles, ArrowRight, CheckCircle2, UserCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 
@@ -42,10 +42,12 @@ export default function LoginPage() {
       await initiateEmailSignIn(auth, email, password);
       toast({ title: "로그인 성공", description: "대시보드로 안전하게 연결되었습니다." });
     } catch (error: any) {
-      console.error(error);
       let message = "이메일 또는 비밀번호를 확인하세요.";
-      if (error.code === 'auth/invalid-credential') message = "계정 정보가 일치하지 않습니다.";
-      if (error.code === 'auth/too-many-requests') message = "너무 많은 시도가 발생했습니다. 잠시 후 다시 시도하세요.";
+      if (error.code === 'auth/invalid-credential') {
+        message = "등록되지 않은 계정이거나 비밀번호가 틀립니다. '신규 등록' 탭에서 계정을 생성해 주세요.";
+      } else if (error.code === 'auth/too-many-requests') {
+        message = "너무 많은 시도가 발생했습니다. 잠시 후 다시 시도하세요.";
+      }
       
       toast({ variant: "destructive", title: "로그인 실패", description: message });
       setIsLoading(false);
@@ -59,13 +61,25 @@ export default function LoginPage() {
     
     try {
       await initiateEmailSignUp(auth, email, password);
-      toast({ title: "회원가입 완료", description: "계정이 생성되었습니다. 관리자 승인 후 모든 기능을 이용하실 수 있습니다." });
+      toast({ title: "회원가입 완료", description: "계정이 생성되었습니다. 이제 바로 서비스를 이용하실 수 있습니다." });
     } catch (error: any) {
       let message = "가입 중 오류가 발생했습니다.";
       if (error.code === 'auth/email-already-in-use') message = "이미 등록된 이메일 주소입니다.";
-      if (error.code === 'auth/weak-password') message = "비밀번호가 너무 취약합니다.";
+      else if (error.code === 'auth/weak-password') message = "비밀번호가 너무 취약합니다.";
       
       toast({ variant: "destructive", title: "가입 실패", description: message });
+      setIsLoading(false);
+    }
+  };
+
+  const handleGuestLogin = async () => {
+    if (!auth) return;
+    setIsLoading(true);
+    try {
+      await initiateAnonymousSignIn(auth);
+      toast({ title: "게스트 접속 성공", description: "체험 모드로 입장합니다. 왼쪽 하단 아이콘으로 권한을 변경해 보세요." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "접속 실패", description: "게스트 접속 중 문제가 발생했습니다." });
       setIsLoading(false);
     }
   };
@@ -141,7 +155,7 @@ export default function LoginPage() {
                 <TabsTrigger value="signup" className="font-bold data-[state=active]:bg-white data-[state=active]:text-primary rounded-none transition-all">신규 등록</TabsTrigger>
               </TabsList>
 
-              <CardContent className="p-8">
+              <CardContent className="p-8 space-y-6">
                 <TabsContent value="login" className="m-0 space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                   <form onSubmit={handleLogin} className="space-y-5">
                     <div className="space-y-2">
@@ -212,10 +226,25 @@ export default function LoginPage() {
                   <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
                     <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
                     <p className="text-[11px] text-slate-600 leading-relaxed font-medium">
-                      가입 완료 후, 관리자가 귀하의 소속을 확인하고 적절한 <span className="font-bold text-primary">권한(병원/기사/공장)</span>을 부여할 예정입니다.
+                      가입 완료 후, 즉시 서비스를 이용하실 수 있습니다. 체험을 원하시면 아래의 <span className="font-bold text-primary">게스트 접속</span>을 이용해 보세요.
                     </p>
                   </div>
                 </TabsContent>
+
+                <div className="relative py-2">
+                  <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
+                  <div className="relative flex justify-center text-[10px] font-black uppercase"><span className="bg-white px-2 text-slate-300 tracking-widest">Or test without account</span></div>
+                </div>
+
+                <Button 
+                  variant="outline" 
+                  className="w-full h-14 rounded-2xl font-black gap-2 border-slate-200 text-slate-600 hover:bg-slate-50 hover:text-primary transition-all"
+                  onClick={handleGuestLogin}
+                  disabled={isLoading}
+                >
+                  {isLoading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5 text-primary" />}
+                  게스트로 즉시 체험하기
+                </Button>
               </CardContent>
             </Tabs>
           </Card>
