@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Hospital, Truck, Factory, ShieldCheck, ChevronRight, Loader2, LogIn, CheckCircle2 } from 'lucide-react';
@@ -12,6 +13,7 @@ import Link from 'next/link';
 export default function LandingPage() {
   const router = useRouter();
   const { user, userData, isUserLoading } = useUser();
+  const { toast } = useToast();
 
   // 권한 기반 리다이렉션: 로그인 정보와 역할 데이터가 모두 로드되었을 때만 실행
   useEffect(() => {
@@ -90,7 +92,21 @@ export default function LandingPage() {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full">
           {roles.map((role) => (
-            <Link key={role.id} href={user ? `/${role.id}` : '/login'}>
+            <Link
+              key={role.id}
+              href={user ? `/${role.id}` : '/login'}
+              onClick={(e) => {
+                if (!user || !userData?.role) return;
+                if (userData.role.toLowerCase() !== role.id) {
+                  e.preventDefault();
+                  toast({
+                    variant: 'destructive',
+                    title: '접근 권한 없음',
+                    description: `이 계정의 권한은「${userData.role}」입니다. 배정된 역할의 대시보드만 이용할 수 있습니다.`,
+                  });
+                }
+              }}
+            >
               <Card className="group hover:shadow-2xl hover:-translate-y-1 transition-all duration-500 border-none cursor-pointer overflow-hidden rounded-[32px] bg-white ring-1 ring-slate-200/50">
                 <CardContent className="p-10 flex items-center gap-8">
                   <div className={`h-20 w-20 rounded-3xl ${role.color} text-white flex items-center justify-center shrink-0 shadow-2xl shadow-${role.id}/20 group-hover:scale-110 transition-transform duration-500`}>

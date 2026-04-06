@@ -1,17 +1,11 @@
 'use client';
 import {
   Auth,
-  signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   UserCredential,
 } from 'firebase/auth';
-
-/** Initiate anonymous sign-in (non-blocking). */
-export function initiateAnonymousSignIn(authInstance: Auth): Promise<UserCredential> {
-  return signInAnonymously(authInstance);
-}
 
 /** Initiate email/password sign-up (non-blocking). */
 export function initiateEmailSignUp(authInstance: Auth, email: string, password: string): Promise<UserCredential> {

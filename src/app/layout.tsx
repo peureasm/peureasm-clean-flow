@@ -3,7 +3,7 @@ import type {Metadata} from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
-import RoleSelector from '@/components/layout/RoleSelector';
+import UserProfileSync from '@/components/layout/UserProfileSync';
 
 export const metadata: Metadata = {
   title: 'Clean-flow | 병원 세탁물 통합 관리 시스템',
@@ -26,7 +26,7 @@ export default function RootLayout({
         <FirebaseClientProvider>
           {children}
           <Toaster />
-          <RoleSelector />
+          <UserProfileSync />
         </FirebaseClientProvider>
       </body>
     </html>

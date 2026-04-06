@@ -66,7 +66,7 @@ export default function DriverDetailPage() {
 
   const getInviteLink = () => {
     if (typeof window === 'undefined' || !driver) return '';
-    // 성함을 포함하여 초대 링크 생성 (RoleSelector에서 이를 인식함)
+    // 성함을 포함하여 초대 링크 생성 (UserProfileSync에서 초대 파라미터 처리)
     return `${window.location.origin}/driver?driverInvite=true&name=${encodeURIComponent(driver.name || '')}`;
   };
 
