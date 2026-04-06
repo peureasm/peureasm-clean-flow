@@ -114,7 +114,7 @@ export default function LoginPage() {
             <span className="text-xs font-bold uppercase tracking-widest">Medical Grade Security</span>
           </div>
           <div className="space-y-4">
-            <h1 className="text-5xl font-black tracking-tight leading-[1.1]">
+            <h1 className="text-5xl font-black text-slate-300 tracking-tight leading-[1.1]">
               투명한 세탁물 관리,<br/>
               <span className="text-emerald-400 underline decoration-emerald-400/30">디지털 워크플로우</span>로.
             </h1>
@@ -150,7 +150,7 @@ export default function LoginPage() {
 
           <Card className="border-none shadow-xl rounded-[32px] overflow-hidden bg-white ring-1 ring-slate-200/50">
             <Tabs defaultValue="login" className="w-full">
-              <TabsList className="grid w-full grid-cols-2 h-14 bg-slate-100/50 p-1 rounded-none">
+              <TabsList className="grid w-full grid-cols-2 h-14 bg-slate-100/50 rounded-none">
                 <TabsTrigger value="login" className="font-bold data-[state=active]:bg-white data-[state=active]:text-primary rounded-none transition-all">로그인</TabsTrigger>
                 <TabsTrigger value="signup" className="font-bold data-[state=active]:bg-white data-[state=active]:text-primary rounded-none transition-all">신규 등록</TabsTrigger>
               </TabsList>

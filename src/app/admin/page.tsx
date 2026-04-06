@@ -45,7 +45,7 @@ export default function AdminDashboard() {
     <div className="space-y-10">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-foreground">a종합 대시보드</h1>
+          <h1 className="text-3xl font-black tracking-tight text-foreground">종합 대시보드</h1>
           <p className="text-muted-foreground font-medium mt-1">실시간 데이터 및 공정 현황을 모니터링합니다.</p>
         </div>
         <div className="flex gap-3">
