@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
   useAuth,
@@ -36,9 +36,6 @@ import {
   ListIcon,
   Save,
   Loader2,
-  Phone,
-  Users,
-  Boxes,
 } from 'lucide-react';
 import Link from 'next/link';
 import {
@@ -56,7 +53,6 @@ import { useToast } from '@/hooks/use-toast';
 import { postAuthenticatedJson } from '@/lib/authenticated-api';
 
 export default function HospitalDetailPage() {
-  type HospitalTabKey = 'requests' | 'staff' | 'items' | 'drivers';
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const auth = useAuth();
@@ -68,7 +64,6 @@ export default function HospitalDetailPage() {
   const [selectedItemIds, setSelectedItemIds] = useState<string[]>([]);
   const [inviteLink, setInviteLink] = useState('');
   const [isGeneratingInvite, setIsGeneratingInvite] = useState(false);
-  const [activeTab, setActiveTab] = useState<HospitalTabKey>('requests');
 
   const hospitalRef = useMemoFirebase(() => {
     if (!firestore || !id) return null;
@@ -100,50 +95,6 @@ export default function HospitalDetailPage() {
   const { data: staff, isLoading: isStaffLoading } = useCollection(staffQuery);
   const { data: drivers, isLoading: isDriversLoading } = useCollection(driversQuery);
   const { data: globalItems, isLoading: isItemsLoading } = useCollection(itemsQuery);
-
-  const staffMembers = useMemo(
-    () =>
-      (staff || []).filter(
-        (member) =>
-          member.role === 'HOSPITAL' ||
-          member.roleRequested === 'HOSPITAL' ||
-          (!member.role && member.hospitalId === id)
-      ),
-    [staff, id]
-  );
-
-  const activeStaffCount = staffMembers.filter((member) => member.role === 'HOSPITAL').length;
-  const pendingStaffCount = staffMembers.filter((member) => !member.role).length;
-  const assignedItems = useMemo(
-    () => (globalItems || []).filter((item) => selectedItemIds.includes(item.id)),
-    [globalItems, selectedItemIds]
-  );
-  const assignedDriver = useMemo(
-    () => (drivers || []).find((driver) => driver.id === hospital?.assignedDriverId) || null,
-    [drivers, hospital?.assignedDriverId]
-  );
-
-  const tabMeta: Record<
-    HospitalTabKey,
-    { title: string; description: string }
-  > = {
-    requests: {
-      title: '최근 요청 이력',
-      description: '이 병원에서 최근 발생한 세탁 요청 흐름을 확인합니다.',
-    },
-    staff: {
-      title: '병원 담당자 관리',
-      description: '병원 소속 사용자와 승인 대기 담당자를 확인합니다.',
-    },
-    items: {
-      title: '사용 품목 설정',
-      description: '이 병원에서 실제로 요청 가능한 품목만 선택해 운영합니다.',
-    },
-    drivers: {
-      title: '수거 기사 배정',
-      description: '현재 담당 기사 상태를 확인하고 즉시 재배정할 수 있습니다.',
-    },
-  };
 
   useEffect(() => {
     setSelectedItemIds(Array.isArray(hospital?.assignedItemIds) ? hospital.assignedItemIds : []);
@@ -311,10 +262,7 @@ export default function HospitalDetailPage() {
           </Button>
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">{hospital.name}</h1>
-            <p className="text-sm text-muted-foreground uppercase font-mono">병원 코드: {hospital.id}</p>
-            <p className="text-sm text-slate-500 mt-1">
-              병원 기본정보, 담당자, 사용 품목, 수거 기사 배정을 이 화면에서 한 번에 관리합니다.
-            </p>
+            <p className="text-sm text-muted-foreground uppercase font-mono">Hospital Code: {hospital.id}</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -385,59 +333,7 @@ export default function HospitalDetailPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
-              <ClipboardList className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase text-slate-400">최근 요청</p>
-              <p className="text-2xl font-black text-slate-900">{requests?.length || 0}</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-              <Users className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase text-slate-400">담당자</p>
-              <p className="text-2xl font-black text-slate-900">{activeStaffCount}</p>
-              <p className="text-xs text-slate-500">승인 대기 {pendingStaffCount}명</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <Boxes className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase text-slate-400">사용 품목</p>
-              <p className="text-2xl font-black text-slate-900">{assignedItems.length}</p>
-              <p className="text-xs text-slate-500">선택된 품목 수</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-5 flex items-center gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center">
-              <Truck className="h-6 w-6" />
-            </div>
-            <div>
-              <p className="text-xs font-bold uppercase text-slate-400">담당 기사</p>
-              <p className="text-lg font-black text-slate-900">
-                {hospital.assignedDriverName || '미배정'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="space-y-6">
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden h-fit">
           <CardHeader className="bg-primary/5 pb-6">
             <div className="flex items-center gap-3">
@@ -457,27 +353,10 @@ export default function HospitalDetailPage() {
                 </div>
               </div>
               <div className="flex items-start gap-3">
-                <Users className="h-5 w-5 text-slate-400 mt-0.5" />
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">대표 담당자</p>
-                  <p className="text-sm font-medium">{hospital.contactPersonName || '미등록'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
-                <Phone className="h-5 w-5 text-slate-400 mt-0.5" />
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">연락처</p>
-                  <p className="text-sm font-medium">{hospital.contactPersonPhone || '미등록'}</p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3">
                 <Truck className="h-5 w-5 text-slate-400 mt-0.5" />
                 <div>
                   <p className="text-[10px] font-bold text-slate-400 uppercase">담당 기사</p>
                   <p className="text-sm font-bold text-primary">{hospital.assignedDriverName || '미지정'}</p>
-                  {assignedDriver?.username && (
-                    <p className="text-xs text-slate-500 mt-1">{assignedDriver.username}</p>
-                  )}
                 </div>
               </div>
               <div className="flex items-start gap-3">
@@ -493,63 +372,23 @@ export default function HospitalDetailPage() {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-          <CardContent className="p-6 space-y-4">
-            <div>
-              <p className="text-sm font-black text-slate-900">운영 체크포인트</p>
-              <p className="text-xs text-slate-500 mt-1">운영자가 가장 먼저 확인해야 할 항목입니다.</p>
-            </div>
-            <div className="space-y-3">
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs font-bold text-slate-400 uppercase">담당자 상태</p>
-                <p className="text-sm font-bold text-slate-900 mt-1">
-                  {activeStaffCount > 0 ? `${activeStaffCount}명 운영 중` : '담당자 등록 필요'}
-                </p>
-                <p className="text-xs text-slate-500 mt-1">승인 대기 {pendingStaffCount}명</p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs font-bold text-slate-400 uppercase">기사 배정 상태</p>
-                <p className="text-sm font-bold text-slate-900 mt-1">
-                  {hospital.assignedDriverName || '담당 기사 미배정'}
-                </p>
-              </div>
-              <div className="rounded-2xl border border-slate-200 p-4">
-                <p className="text-xs font-bold text-slate-400 uppercase">사용 품목 상태</p>
-                <p className="text-sm font-bold text-slate-900 mt-1">
-                  {assignedItems.length > 0 ? `${assignedItems.length}개 품목 선택됨` : '사용 품목 설정 필요'}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        </div>
-
         <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as HospitalTabKey)} className="w-full">
+          <Tabs defaultValue="requests" className="w-full">
             <div className="px-6 pt-4 border-b">
               <TabsList className="bg-transparent h-12 gap-6 flex overflow-x-auto no-scrollbar">
                 <TabsTrigger value="requests" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <ClipboardList className="h-4 w-4 mr-2" /> 요청 이력
-                  <Badge variant="outline" className="ml-2 rounded-full">{requests?.length || 0}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="staff" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
-                  <ShieldCheck className="h-4 w-4 mr-2" /> 병원 담당자
-                  <Badge variant="outline" className="ml-2 rounded-full">{staffMembers.length}</Badge>
+                  <ShieldCheck className="h-4 w-4 mr-2" /> 담당자
                 </TabsTrigger>
                 <TabsTrigger value="items" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <ListIcon className="h-4 w-4 mr-2" /> 품목 설정
-                  <Badge variant="outline" className="ml-2 rounded-full">{assignedItems.length}</Badge>
                 </TabsTrigger>
                 <TabsTrigger value="drivers" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary font-bold whitespace-nowrap">
                   <Truck className="h-4 w-4 mr-2" /> 기사 배정
-                  <Badge variant="outline" className="ml-2 rounded-full">{hospital.assignedDriverId ? 1 : 0}</Badge>
                 </TabsTrigger>
               </TabsList>
-            </div>
-
-            <div className="px-6 py-4 bg-slate-50/70 border-b">
-              <p className="text-sm font-black text-slate-900">{tabMeta[activeTab].title}</p>
-              <p className="text-xs text-slate-500 mt-1">{tabMeta[activeTab].description}</p>
             </div>
 
             <TabsContent value="requests" className="m-0">
@@ -588,43 +427,23 @@ export default function HospitalDetailPage() {
             <TabsContent value="staff" className="m-0">
               {isStaffLoading ? (
                 <div className="p-12 text-center text-slate-300">담당자 정보를 불러오는 중...</div>
-              ) : staffMembers.length > 0 ? (
+              ) : staff && staff.length > 0 ? (
                 <Table>
                   <TableHeader className="bg-slate-50/50">
                     <TableRow>
                       <TableHead className="font-bold text-xs uppercase">이름</TableHead>
                       <TableHead className="font-bold text-xs uppercase">이메일</TableHead>
-                      <TableHead className="font-bold text-xs uppercase">권한 상태</TableHead>
                       <TableHead className="text-right font-bold text-xs uppercase">상태</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {staffMembers.map((member) => (
+                    {staff.map((member) => (
                       <TableRow key={member.id}>
                         <TableCell className="font-bold">{member.name}</TableCell>
                         <TableCell className="text-slate-500 text-xs">{member.username}</TableCell>
-                        <TableCell>
-                          <Badge
-                            variant="outline"
-                            className={
-                              member.role === 'HOSPITAL'
-                                ? 'bg-blue-50 text-blue-700 border-blue-100'
-                                : 'bg-amber-50 text-amber-700 border-amber-100'
-                            }
-                          >
-                            {member.role === 'HOSPITAL' ? '운영 권한 부여됨' : '승인 대기'}
-                          </Badge>
-                        </TableCell>
                         <TableCell className="text-right">
-                          <Badge
-                            variant="outline"
-                            className={
-                              member.role === 'HOSPITAL'
-                                ? 'bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px]'
-                                : 'bg-amber-50 text-amber-700 border-amber-100 text-[10px]'
-                            }
-                          >
-                            {member.role === 'HOSPITAL' ? '활성' : '대기'}
+                          <Badge variant="outline" className="bg-emerald-50 text-emerald-600 border-emerald-100 text-[10px]">
+                            ACTIVE
                           </Badge>
                         </TableCell>
                       </TableRow>
@@ -640,31 +459,13 @@ export default function HospitalDetailPage() {
               <div className="p-6 bg-slate-50/50 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-700">병원 사용 품목</h3>
-                  <p className="text-xs text-muted-foreground">
-                    이 병원에서 요청 가능한 세탁 품목만 선택해 현장 요청 실수를 줄입니다.
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2">현재 선택된 품목 {assignedItems.length}개</p>
+                  <p className="text-xs text-muted-foreground">이 병원에서 요청 가능한 세탁 품목을 선택합니다.</p>
                 </div>
                 <Button onClick={handleSaveAssignedItems} className="rounded-xl bg-primary text-white font-bold h-10 gap-2 shadow-lg shadow-primary/20" disabled={isSavingItems}>
                   {isSavingItems ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                   저장
                 </Button>
               </div>
-
-              {assignedItems.length > 0 && (
-                <div className="px-6 pt-4 flex flex-wrap gap-2">
-                  {assignedItems.slice(0, 8).map((item) => (
-                    <Badge key={item.id} variant="outline" className="rounded-full bg-primary/5 border-primary/20 text-primary">
-                      {item.name}
-                    </Badge>
-                  ))}
-                  {assignedItems.length > 8 && (
-                    <Badge variant="outline" className="rounded-full">
-                      +{assignedItems.length - 8}개 더 선택됨
-                    </Badge>
-                  )}
-                </div>
-              )}
 
               {isItemsLoading ? (
                 <div className="p-12 text-center text-slate-300">품목 정보를 불러오는 중...</div>
@@ -701,11 +502,7 @@ export default function HospitalDetailPage() {
               <div className="p-6 bg-slate-50/50 border-b flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-sm font-bold text-slate-700">담당 기사 배정</h3>
-                  <p className="text-xs text-muted-foreground">
-                    {hospital.assignedDriverName
-                      ? `현재 ${hospital.assignedDriverName} 기사가 배정되어 있습니다.`
-                      : '아직 담당 기사가 배정되지 않았습니다.'}
-                  </p>
+                  <p className="text-xs text-muted-foreground">이 병원을 담당할 수거 기사를 지정하거나 변경합니다.</p>
                 </div>
                 {hospital.assignedDriverId && (
                   <Button variant="ghost" size="sm" className="text-destructive font-bold hover:bg-destructive/5 gap-2" onClick={handleUnassignDriver}>

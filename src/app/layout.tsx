@@ -1,13 +1,12 @@
-
-import type {Metadata} from 'next';
+﻿import type { Metadata } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
 import UserProfileSync from '@/components/layout/UserProfileSync';
 
 export const metadata: Metadata = {
-  title: 'Clean-flow | 병원 세탁물 통합 관리 시스템',
-  description: '병원-기사-공장을 잇는 스마트 세탁물 수거 및 공정 관리 솔루션',
+  title: 'Clean-Flow | 병원 세탁물 운영 통합 플랫폼',
+  description: '병원, 기사, 공장, 관리자를 하나의 흐름으로 연결해 요청, 배정, 처리, 정산을 통합 관리하는 시스템입니다.',
 };
 
 export default function RootLayout({

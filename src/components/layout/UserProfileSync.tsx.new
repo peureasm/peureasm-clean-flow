@@ -1,13 +1,8 @@
 'use client';
 
-import { Suspense, useEffect, useRef } from 'react';
+import { Suspense, useEffect } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import {
-  useFirestore,
-  useUser,
-  setDocumentNonBlocking,
-  updateDocumentNonBlocking,
-} from '@/firebase';
+import { useFirestore, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserRole } from '@/app/lib/types';
@@ -20,65 +15,25 @@ function UserProfileSyncInner() {
   const firestore = useFirestore();
   const { user, userData, isUserLoading } = useUser();
   const { toast } = useToast();
-  const acceptedInviteRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!user || !firestore || isUserLoading) return;
 
     const userRef = doc(firestore, 'users', user.uid);
-    const inviteToken = searchParams.get('inviteToken');
+    const inviteId = searchParams.get('inviteId');
+    const driverInvite = searchParams.get('driverInvite');
+    const inviteName = searchParams.get('name');
     const requestedRoleParam = (searchParams.get('requestedRole') || '').toUpperCase();
     const requestedRole: UserRole | null =
-      requestedRoleParam === 'HOSPITAL' ||
-      requestedRoleParam === 'DRIVER' ||
-      requestedRoleParam === 'FACTORY' ||
-      requestedRoleParam === 'ADMIN'
+      requestedRoleParam === 'HOSPITAL' || requestedRoleParam === 'DRIVER' || requestedRoleParam === 'FACTORY' || requestedRoleParam === 'ADMIN'
         ? (requestedRoleParam as UserRole)
         : null;
 
-    if (inviteToken && !userData?.role && acceptedInviteRef.current !== inviteToken) {
-      acceptedInviteRef.current = inviteToken;
-
-      void (async () => {
-        try {
-          const idToken = await user.getIdToken();
-          const response = await fetch('/api/invitations/accept', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              idToken,
-              inviteToken,
-            }),
-          });
-
-          const data = await response.json().catch(() => null);
-
-          if (!response.ok) {
-            throw new Error(
-              data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
-                ? data.error
-                : 'Unable to verify the invite link.'
-            );
-          }
-
-          if (pathname !== '/pending') {
-            router.replace('/pending');
-          }
-        } catch (error) {
-          acceptedInviteRef.current = null;
-          toast({
-            variant: 'destructive',
-            title: 'Invite verification failed',
-            description:
-              error instanceof Error ? error.message : 'Unable to verify the invite link.',
-          });
-        }
-      })();
-
-      return;
-    }
+    const requestedRoleFromLink: UserRole | null = inviteId
+      ? 'HOSPITAL'
+      : driverInvite
+        ? 'DRIVER'
+        : requestedRole;
 
     if (!userData) {
       const defaultRole: UserRole | null = isAdminEmail(user.email) ? 'ADMIN' : null;
@@ -88,16 +43,39 @@ function UserProfileSyncInner() {
         {
           id: user.uid,
           username: user.email || `user_${user.uid.slice(0, 8)}`,
-          name: user.displayName || user.email || `user_${user.uid.slice(0, 8)}`,
+          name: inviteName || user.displayName || '신규 사용자',
           role: defaultRole,
-          roleRequested: defaultRole ?? requestedRole ?? 'HOSPITAL',
-          hospitalId: null,
+          roleRequested: defaultRole ?? requestedRoleFromLink ?? 'HOSPITAL',
+          hospitalId: inviteId || null,
           isActive: true,
           updatedAt: serverTimestamp(),
           createdAt: serverTimestamp(),
         },
         { merge: true }
       );
+      return;
+    }
+
+    if (!userData.role && inviteId && userData.hospitalId !== inviteId) {
+      updateDocumentNonBlocking(userRef, {
+        hospitalId: inviteId,
+        roleRequested: 'HOSPITAL',
+        updatedAt: serverTimestamp(),
+      });
+      toast({
+        title: '소속 정보 업데이트',
+        description: `${inviteName || '병원'} 소속 요청으로 저장했습니다.`,
+      });
+      if (pathname !== '/pending') router.push('/pending');
+      return;
+    }
+
+    if (!userData.role && driverInvite && userData.roleRequested !== 'DRIVER') {
+      updateDocumentNonBlocking(userRef, {
+        roleRequested: 'DRIVER',
+        updatedAt: serverTimestamp(),
+      });
+      if (pathname !== '/pending') router.push('/pending');
       return;
     }
 

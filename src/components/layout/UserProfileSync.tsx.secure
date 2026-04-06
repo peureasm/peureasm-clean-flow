@@ -12,6 +12,7 @@ import { doc, serverTimestamp } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import type { UserRole } from '@/app/lib/types';
 import { isAdminEmail } from '@/lib/admin-emails';
+import { postAuthenticatedJson } from '@/lib/authenticated-api';
 
 function UserProfileSyncInner() {
   const pathname = usePathname();
@@ -41,27 +42,9 @@ function UserProfileSyncInner() {
 
       void (async () => {
         try {
-          const idToken = await user.getIdToken();
-          const response = await fetch('/api/invitations/accept', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              idToken,
-              inviteToken,
-            }),
+          await postAuthenticatedJson(user.auth, '/api/invitations/accept', {
+            inviteToken,
           });
-
-          const data = await response.json().catch(() => null);
-
-          if (!response.ok) {
-            throw new Error(
-              data && typeof data === 'object' && 'error' in data && typeof data.error === 'string'
-                ? data.error
-                : 'Unable to verify the invite link.'
-            );
-          }
 
           if (pathname !== '/pending') {
             router.replace('/pending');

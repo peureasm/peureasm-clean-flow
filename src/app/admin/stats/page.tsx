@@ -7,6 +7,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line } from 'recharts';
 import { BarChart3, TrendingUp, PieChart as PieChartIcon, Package, AlertCircle } from 'lucide-react';
 
+type StatusDatum = {
+  name: string;
+  value: number;
+};
+
+type DateDatum = {
+  date: string;
+  count: number;
+};
+
 export default function AdminStatsPage() {
   const firestore = useFirestore();
 
@@ -23,7 +33,10 @@ export default function AdminStatsPage() {
     return acc;
   }, {}) || {};
 
-  const pieData = Object.entries(statusCounts).map(([name, value]) => ({ name, value }));
+  const pieData: StatusDatum[] = Object.entries(statusCounts).map(([name, value]) => ({
+    name,
+    value: Number(value),
+  }));
   const COLORS = ['#336699', '#3DC2D8', '#FF8C00', '#DC3545', '#10B981', '#6366F1', '#8B5CF6'];
 
   const dateCounts = requests?.reduce((acc: any, curr: any) => {
@@ -32,9 +45,9 @@ export default function AdminStatsPage() {
     return acc;
   }, {}) || {};
 
-  const lineData = Object.entries(dateCounts)
+  const lineData: DateDatum[] = Object.entries(dateCounts)
     .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([date, count]) => ({ date, count }));
+    .map(([date, count]) => ({ date, count: Number(count) }));
 
   // 실제 데이터 기반 계산
   const totalRequests = requests?.length || 0;

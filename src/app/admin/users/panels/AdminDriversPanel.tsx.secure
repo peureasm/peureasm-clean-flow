@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import {
   useAuth,
   useFirestore,
@@ -67,7 +67,6 @@ export default function AdminDriversPanel() {
   const [editingDriver, setEditingDriver] = useState<any>(null);
   const [deletingDriver, setDeletingDriver] = useState<any>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [assignmentFilter, setAssignmentFilter] = useState<'all' | 'assigned' | 'unassigned'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
@@ -85,59 +84,25 @@ export default function AdminDriversPanel() {
   const { data: drivers, isLoading: isDriversLoading } = useCollection(driversQuery);
   const { data: hospitals } = useCollection(hospitalsQuery);
 
-  const assignedHospitalCountByDriver = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const hospital of hospitals || []) {
-      if (!hospital.assignedDriverId) continue;
-      counts[hospital.assignedDriverId] = (counts[hospital.assignedDriverId] || 0) + 1;
-    }
-    return counts;
-  }, [hospitals]);
-
-  const normalizedSearch = searchTerm.trim().toLowerCase();
-  const totalDrivers = (drivers || []).length;
-  const assignedDrivers = (drivers || []).filter(
-    (driver) => (assignedHospitalCountByDriver[driver.id] || 0) > 0
-  ).length;
-  const unassignedDrivers = totalDrivers - assignedDrivers;
-
-  const filteredDrivers = (drivers || []).filter((driver) => {
-    const matchesSearch =
-      !normalizedSearch ||
-      driver.name?.toLowerCase().includes(normalizedSearch) ||
-      driver.username?.toLowerCase().includes(normalizedSearch);
-
-    if (!matchesSearch) return false;
-
-    const assignedHospitalCount = assignedHospitalCountByDriver[driver.id] || 0;
-    if (assignmentFilter === 'assigned') return assignedHospitalCount > 0;
-    if (assignmentFilter === 'unassigned') return assignedHospitalCount === 0;
-    return true;
-  });
+  const filteredDrivers =
+    drivers?.filter(
+      (driver) =>
+        driver.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        driver.username?.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
 
   const paginatedDrivers = filteredDrivers.slice(
     (currentPage - 1) * pageSize,
     currentPage * pageSize
   );
 
-  const handleCopyGlobalInvite = async (driver?: any) => {
-    const candidateEmail = String(driver?.username || '').trim();
-    if (driver && !candidateEmail.includes('@')) {
-      toast({
-        variant: 'destructive',
-        title: '초대 링크 생성 불가',
-        description: '이 기사 계정에는 초대를 보낼 이메일이 없습니다.',
-      });
-      return;
-    }
-
+  const handleCopyGlobalInvite = async () => {
     try {
       const response = await postAuthenticatedJson<{ inviteUrl: string }>(
         auth,
         '/api/invitations/create',
         {
           role: 'DRIVER',
-          targetUserId: driver?.id,
         }
       );
       await navigator.clipboard.writeText(response.inviteUrl);
@@ -203,7 +168,8 @@ export default function AdminDriversPanel() {
     setDeletingDriver(null);
   };
 
-  const getAssignedHospitalCount = (driverId: string) => assignedHospitalCountByDriver[driverId] || 0;
+  const getAssignedHospitalCount = (driverId: string) =>
+    hospitals?.filter((hospital) => hospital.assignedDriverId === driverId).length || 0;
 
   return (
     <div className="space-y-6">
@@ -218,7 +184,7 @@ export default function AdminDriversPanel() {
         <div className="flex gap-2 w-full md:w-auto">
           <Button
             variant="outline"
-            className="hidden flex-1 md:flex-none rounded-xl gap-2 h-12 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
+            className="flex-1 md:flex-none rounded-xl gap-2 h-12 border-emerald-500 text-emerald-600 hover:bg-emerald-50"
             onClick={() => void handleCopyGlobalInvite()}
           >
             <Share2 className="h-4 w-4" /> 기사 초대 링크
@@ -249,42 +215,6 @@ export default function AdminDriversPanel() {
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant={assignmentFilter === 'all' ? 'default' : 'outline'}
-          className="rounded-xl h-10 gap-2 font-bold"
-          onClick={() => {
-            setAssignmentFilter('all');
-            setCurrentPage(1);
-          }}
-        >
-          전체
-          <Badge className="bg-slate-100 text-slate-700 border-slate-200">{totalDrivers}</Badge>
-        </Button>
-        <Button
-          variant={assignmentFilter === 'assigned' ? 'default' : 'outline'}
-          className="rounded-xl h-10 gap-2 font-bold"
-          onClick={() => {
-            setAssignmentFilter('assigned');
-            setCurrentPage(1);
-          }}
-        >
-          배정됨
-          <Badge className="bg-slate-100 text-slate-700 border-slate-200">{assignedDrivers}</Badge>
-        </Button>
-        <Button
-          variant={assignmentFilter === 'unassigned' ? 'default' : 'outline'}
-          className="rounded-xl h-10 gap-2 font-bold"
-          onClick={() => {
-            setAssignmentFilter('unassigned');
-            setCurrentPage(1);
-          }}
-        >
-          미배정
-          <Badge className="bg-slate-100 text-slate-700 border-slate-200">{unassignedDrivers}</Badge>
-        </Button>
-      </div>
-
       {isDriversLoading ? (
         <div className="flex flex-col items-center justify-center py-20 gap-3 text-slate-400">
           <Loader2 className="h-8 w-8 animate-spin" />
@@ -308,23 +238,10 @@ export default function AdminDriversPanel() {
                       <div className="flex items-center gap-1">
                         <Badge
                           variant="outline"
-                          className={`text-[10px] font-bold ${
-                            driver.isActive === false
-                              ? 'border-red-100 bg-red-50 text-red-600'
-                              : 'border-emerald-100 bg-emerald-50 text-emerald-600'
-                          }`}
+                          className="text-[10px] font-bold border-emerald-100 bg-emerald-50 text-emerald-600"
                         >
-                          {driver.isActive === false ? '비활성' : '활성'}
+                          ACTIVE
                         </Badge>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-full h-8 w-8 text-slate-300 hover:text-emerald-600"
-                          onClick={() => void handleCopyGlobalInvite(driver)}
-                          title="이 기사에게 초대 링크 보내기"
-                        >
-                          <Share2 className="h-4 w-4" />
-                        </Button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button variant="ghost" size="icon" className="rounded-full h-8 w-8 text-slate-300">
@@ -352,7 +269,7 @@ export default function AdminDriversPanel() {
                       </div>
                     </div>
                     <CardTitle className="text-xl font-black mt-4 text-slate-900">{driver.name}</CardTitle>
-                    <p className="text-[10px] font-mono text-slate-400 uppercase">계정 ID: {driver.id}</p>
+                    <p className="text-[10px] font-mono text-slate-400 uppercase">ID: {driver.id}</p>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2.5">

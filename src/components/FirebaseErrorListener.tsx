@@ -56,7 +56,7 @@ export function FirebaseErrorListener() {
             <AlertDialogTitle className="text-2xl font-black text-slate-900 tracking-tight">접근 권한이 없습니다</AlertDialogTitle>
             <AlertDialogDescription className="text-slate-500 font-medium leading-relaxed">
               요청하신 데이터에 접근할 수 있는 권한이 부족합니다.<br/>
-              현재 역할({error.request.auth?.token?.sign_in_provider})에 배정된 권한을 확인해 주세요.
+              현재 역할({error.request.auth?.token?.firebase?.sign_in_provider})에 배정된 권한을 확인해 주세요.
             </AlertDialogDescription>
           </div>
         </div>

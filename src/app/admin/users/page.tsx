@@ -3,8 +3,8 @@
 
 import { useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useAuth, useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
@@ -31,15 +31,18 @@ import Pagination from '@/components/shared/Pagination';
 import { UserRole } from '@/app/lib/types';
 import AdminHospitalsPanel from '@/app/admin/users/panels/AdminHospitalsPanel';
 import AdminDriversPanel from '@/app/admin/users/panels/AdminDriversPanel';
+import { postAuthenticatedJson } from '@/lib/authenticated-api';
 
 export default function AdminUsersPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const auth = useAuth();
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState<'all' | 'pending'>('all');
   const [confirm, setConfirm] = useState<null | { userId: string; role: UserRole; kind: 'set' | 'approve' }>(null);
+  const [isApplying, setIsApplying] = useState(false);
   const tab = useMemo<'users' | 'hospitals' | 'drivers'>(() => {
     const t = (searchParams.get('tab') || 'users').toLowerCase();
     if (t === 'hospitals') return 'hospitals';
@@ -59,7 +62,22 @@ export default function AdminUsersPage() {
   const { data: users, isLoading } = useCollection(usersQuery);
 
   const normalizedSearch = searchTerm.trim().toLowerCase();
+  const totalUsers = (users || []).length;
   const pendingUsers = (users || []).filter((u) => !u.role);
+  const inactiveUsers = (users || []).filter((u) => u.isActive === false).length;
+  const recentThreshold = Date.now() - 7 * 24 * 60 * 60 * 1000;
+  const recentUsers = (users || []).filter((u) => {
+    if (!u.createdAt) return false;
+    const createdAt = new Date(u.createdAt);
+    return !Number.isNaN(createdAt.getTime()) && createdAt.getTime() >= recentThreshold;
+  }).length;
+  const roleLabelMap: Record<UserRole, string> = {
+    ADMIN: '관리자',
+    HOSPITAL: '병원',
+    DRIVER: '기사',
+    FACTORY: '공장',
+  };
+  const getRoleLabel = (role?: UserRole | null) => (role ? roleLabelMap[role] : '승인 대기');
 
   const filteredUsers = (users || []).filter(user => {
     if (viewMode === 'pending' && user.role) return false;
@@ -67,8 +85,8 @@ export default function AdminUsersPage() {
     return (
       user.name?.toLowerCase().includes(normalizedSearch) ||
       user.username?.toLowerCase().includes(normalizedSearch) ||
-      String(user.role || 'PENDING').toLowerCase().includes(normalizedSearch) ||
-      String(user.roleRequested || '').toLowerCase().includes(normalizedSearch)
+      getRoleLabel(user.role as UserRole | null).toLowerCase().includes(normalizedSearch) ||
+      getRoleLabel((user.roleRequested || undefined) as UserRole | undefined).toLowerCase().includes(normalizedSearch)
     );
   });
 
@@ -77,12 +95,11 @@ export default function AdminUsersPage() {
     currentPage * pageSize
   );
 
-  const handleRoleChange = (userId: string, newRole: UserRole) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'users', userId), {
+  const handleRoleChange = async (userId: string, newRole: UserRole) => {
+    await postAuthenticatedJson(auth, '/api/admin/users', {
+      userId,
+      action: 'set-role',
       role: newRole,
-      roleRequested: newRole,
-      updatedAt: new Date().toISOString()
     });
     toast({
       title: "권한 변경 완료",
@@ -90,12 +107,11 @@ export default function AdminUsersPage() {
     });
   };
 
-  const handleApproveRequested = (userId: string, requested: UserRole) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'users', userId), {
+  const handleApproveRequested = async (userId: string, requested: UserRole) => {
+    await postAuthenticatedJson(auth, '/api/admin/users', {
+      userId,
+      action: 'approve',
       role: requested,
-      roleRequested: requested,
-      updatedAt: new Date().toISOString(),
     });
     toast({
       title: "승인 완료",
@@ -103,11 +119,11 @@ export default function AdminUsersPage() {
     });
   };
 
-  const handleStatusToggle = (userId: string, currentStatus: boolean) => {
-    if (!firestore) return;
-    updateDocumentNonBlocking(doc(firestore, 'users', userId), {
+  const handleStatusToggle = async (userId: string, currentStatus: boolean) => {
+    await postAuthenticatedJson(auth, '/api/admin/users', {
+      userId,
+      action: 'set-active',
       isActive: !currentStatus,
-      updatedAt: new Date().toISOString()
     });
     toast({
       title: currentStatus ? "계정 비활성화" : "계정 활성화",
@@ -115,11 +131,22 @@ export default function AdminUsersPage() {
     });
   };
 
-  const confirmApply = () => {
+  const confirmApply = async () => {
     if (!confirm) return;
-    if (confirm.kind === 'approve') handleApproveRequested(confirm.userId, confirm.role);
-    else handleRoleChange(confirm.userId, confirm.role);
-    setConfirm(null);
+    setIsApplying(true);
+    try {
+      if (confirm.kind === 'approve') await handleApproveRequested(confirm.userId, confirm.role);
+      else await handleRoleChange(confirm.userId, confirm.role);
+      setConfirm(null);
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: '권한 변경 실패',
+        description: error instanceof Error ? error.message : '사용자 권한을 변경할 수 없습니다.',
+      });
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   return (
@@ -173,6 +200,35 @@ export default function AdminUsersPage() {
 
       {tab === 'users' && (
       <>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Card className="border-none shadow-sm rounded-2xl">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 font-bold uppercase">전체 사용자</p>
+            <p className="text-2xl font-black text-slate-900 mt-1">{totalUsers}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm rounded-2xl">
+          <CardContent className="p-4">
+            <p className="text-xs text-slate-500 font-bold uppercase">승인 대기</p>
+            <p className="text-2xl font-black text-amber-600 mt-1">{pendingUsers.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm rounded-2xl">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-slate-500 font-bold uppercase">비활성 계정</p>
+                <p className="text-2xl font-black text-red-600 mt-1">{inactiveUsers}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-xs text-slate-500 font-bold uppercase">최근 7일</p>
+                <p className="text-2xl font-black text-emerald-600 mt-1">{recentUsers}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       <div className="flex flex-col lg:flex-row lg:items-center gap-3">
         <div className="relative max-w-md w-full">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -253,12 +309,12 @@ export default function AdminUsersPage() {
                             user.role === 'DRIVER' ? 'bg-emerald-50 text-emerald-600' :
                             'bg-purple-50 text-purple-600'
                           }`}>
-                            {user.role}
+                            {getRoleLabel(user.role as UserRole)}
                           </Badge>
                         ) : (
                           <div className="space-y-1">
                             <Badge variant="outline" className="font-black text-[10px] border-none px-2.5 py-1 bg-amber-50 text-amber-700">
-                              PENDING
+                              승인 대기
                             </Badge>
                             {user.roleRequested && (
                               <p className="text-[10px] text-slate-400 font-bold">
@@ -302,10 +358,10 @@ export default function AdminUsersPage() {
                               <SelectValue placeholder={user.role ? '역할' : '승인(역할)'} />
                             </SelectTrigger>
                             <SelectContent className="rounded-xl font-bold">
-                              <SelectItem value="ADMIN">ADMIN</SelectItem>
-                              <SelectItem value="HOSPITAL">HOSPITAL</SelectItem>
-                              <SelectItem value="DRIVER">DRIVER</SelectItem>
-                              <SelectItem value="FACTORY">FACTORY</SelectItem>
+                              <SelectItem value="ADMIN">관리자</SelectItem>
+                              <SelectItem value="HOSPITAL">병원</SelectItem>
+                              <SelectItem value="DRIVER">기사</SelectItem>
+                              <SelectItem value="FACTORY">공장</SelectItem>
                             </SelectContent>
                           </Select>
                           <Button 
@@ -357,7 +413,11 @@ export default function AdminUsersPage() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel className="rounded-xl font-black">취소</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmApply} className="rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800">
+            <AlertDialogAction
+              onClick={confirmApply}
+              disabled={isApplying}
+              className="rounded-xl font-black bg-slate-900 text-white hover:bg-slate-800 disabled:opacity-70"
+            >
               확인
             </AlertDialogAction>
           </AlertDialogFooter>
