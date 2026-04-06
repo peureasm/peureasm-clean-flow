@@ -62,10 +62,10 @@ export default function FactoryLayout({ children }: { children: React.ReactNode 
     );
   }
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (auth) {
-      initiateSignOut(auth);
-      router.push('/');
+      await initiateSignOut(auth);
+      router.push('/login');
     }
   };
 

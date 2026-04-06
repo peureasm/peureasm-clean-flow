@@ -91,10 +91,10 @@ function AdminSidebar() {
   const auth = useAuth();
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (auth) {
-      initiateSignOut(auth);
-      router.push('/');
+      await initiateSignOut(auth);
+      router.push('/login');
     }
   };
 

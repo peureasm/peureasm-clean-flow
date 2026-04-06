@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { UserRole } from '@/app/lib/types';
 import { Hospital, Truck, Factory, ShieldCheck, GripVertical, X, Loader2, Sparkles } from 'lucide-react';
-import { useAuth, useFirestore, initiateAnonymousSignIn, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore, useUser, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -35,17 +35,11 @@ function RoleSelectorContent() {
 
   const currentPathRole = pathname.split('/')[1]?.toUpperCase() as UserRole;
 
-  // 자동 익명 로그인 처리 (인증 정보가 없을 시)
-  useEffect(() => {
-    if (!isUserLoading && !user && auth && !['/login', '/'].includes(pathname)) {
-      initiateAnonymousSignIn(auth).catch((err) => console.log("Auth sync skipped:", err.message));
-    }
-  }, [user, isUserLoading, auth, pathname]);
-
-  // 프로필 초기 생성 및 초대 정보 동기화 고도화
+  // 프로필 초기 생성 및 초대 정보 동기화
   useEffect(() => {
     const syncUserProfile = async () => {
-      if (user && firestore && !isSwitching) {
+      // 로그인이 되어 있고, 로딩 중이 아닐 때만 실행
+      if (user && firestore && !isSwitching && !isUserLoading) {
         const userRef = doc(firestore, 'users', user.uid);
         
         const inviteId = searchParams.get('inviteId');
@@ -53,7 +47,7 @@ function RoleSelectorContent() {
         const inviteName = searchParams.get('name');
 
         // 데이터가 아예 없는 신규 유저인 경우 프로필 생성
-        if (!userData && !isUserLoading) {
+        if (!userData) {
           const defaultRole = inviteId ? 'HOSPITAL' : (driverInvite ? 'DRIVER' : (currentPathRole || 'HOSPITAL'));
           
           setDocumentNonBlocking(userRef, {
@@ -73,7 +67,7 @@ function RoleSelectorContent() {
           }
         } 
         // 기존 유저가 초대 링크로 들어온 경우 업데이트
-        else if (inviteId && userData && userData.hospitalId !== inviteId) {
+        else if (inviteId && userData.hospitalId !== inviteId) {
           updateDocumentNonBlocking(userRef, {
             hospitalId: inviteId,
             role: 'HOSPITAL',
@@ -147,7 +141,7 @@ function RoleSelectorContent() {
     };
   }, [isDragging]);
 
-  if (pathname === '/login') return null;
+  if (pathname === '/login' || !user) return null;
 
   return (
     <div 
