@@ -1,0 +1,41 @@
+﻿<svg width="1280" height="820" viewBox="0 0 1280 820" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="body" x1="640" y1="660" x2="640" y2="748" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#4F545C"/>
+      <stop offset="0.55" stop-color="#2F3339"/>
+      <stop offset="1" stop-color="#1D2026"/>
+    </linearGradient>
+    <linearGradient id="plate" x1="640" y1="714" x2="640" y2="804" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#D7D9DE"/>
+      <stop offset="0.48" stop-color="#B6BBC3"/>
+      <stop offset="1" stop-color="#8A909A"/>
+    </linearGradient>
+    <linearGradient id="plateEdge" x1="640" y1="760" x2="640" y2="804" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#757C87"/>
+      <stop offset="1" stop-color="#606772"/>
+    </linearGradient>
+    <filter id="shadow" x="80" y="90" width="1120" height="700" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0B1020" flood-opacity="0.35"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <rect x="210" y="110" width="860" height="560" rx="22" fill="#07090D"/>
+  </g>
+
+  <rect x="246" y="146" width="788" height="486" rx="8" fill="none"/>
+
+  <path d="M585 110H695V126C695 132 690 137 684 137H596C590 137 585 132 585 126V110Z" fill="#07090D"/>
+  <circle cx="640" cy="123" r="4" fill="#232834"/>
+
+  <rect x="210" y="640" width="860" height="30" rx="8" fill="url(#body)"/>
+
+  <path d="M120 690C120 674 132 662 148 662H1132C1148 662 1160 674 1160 690V694C1160 707 1150 718 1137 718H143C130 718 120 707 120 694V690Z" fill="url(#plate)"/>
+  <path d="M120 704H1160V719C1160 734 1148 746 1133 746H147C132 746 120 734 120 719V704Z" fill="url(#plateEdge)"/>
+
+  <rect x="566" y="672" width="148" height="18" rx="9" fill="#E7E9EE"/>
+  <rect x="566" y="676" width="148" height="4" rx="2" fill="#F6F7F9" opacity="0.75"/>
+
+  <rect x="124" y="736" width="96" height="8" rx="4" fill="#4F5661" opacity="0.7"/>
+  <rect x="1060" y="736" width="96" height="8" rx="4" fill="#4F5661" opacity="0.7"/>
+</svg>

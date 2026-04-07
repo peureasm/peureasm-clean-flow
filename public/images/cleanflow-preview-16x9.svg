@@ -1,0 +1,98 @@
+﻿<svg width="1600" height="900" viewBox="0 0 1600 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="900" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#F7F9FF"/>
+      <stop offset="1" stop-color="#EEF3FF"/>
+    </linearGradient>
+    <linearGradient id="header" x1="240" y1="116" x2="1376" y2="116" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#3151E5"/>
+      <stop offset="1" stop-color="#5F6FF0"/>
+    </linearGradient>
+    <filter id="shadow" x="0" y="0" width="1800" height="1100" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="14" stdDeviation="18" flood-color="#1E2A55" flood-opacity="0.18"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" rx="20" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <rect x="80" y="70" width="1440" height="760" rx="26" fill="#FFFFFF"/>
+  </g>
+
+  <rect x="80" y="70" width="1440" height="64" rx="26" fill="url(#header)"/>
+  <rect x="80" y="108" width="1440" height="26" fill="url(#header)"/>
+  <circle cx="126" cy="101" r="7" fill="#BFD0FF"/>
+  <circle cx="150" cy="101" r="7" fill="#D5E0FF"/>
+  <circle cx="174" cy="101" r="7" fill="#E7EEFF"/>
+  <rect x="268" y="89" width="188" height="24" rx="12" fill="#6D7CF1"/>
+  <text x="286" y="105" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="12" font-weight="700">Clean-Flow Dashboard</text>
+
+  <rect x="104" y="158" width="270" height="640" rx="14" fill="#F3F6FF"/>
+  <text x="132" y="192" fill="#7080A8" font-family="Arial, sans-serif" font-size="12" font-weight="700">HOSPITAL LIST</text>
+
+  <g>
+    <rect x="124" y="214" width="230" height="52" rx="12" fill="#FFFFFF"/>
+    <circle cx="146" cy="240" r="6" fill="#3151E5"/>
+    <text x="164" y="246" fill="#30415F" font-family="Arial, sans-serif" font-size="14" font-weight="600">Gangnam Medical Center</text>
+
+    <rect x="124" y="276" width="230" height="52" rx="12" fill="#FFFFFF"/>
+    <circle cx="146" cy="302" r="6" fill="#29B38D"/>
+    <text x="164" y="308" fill="#30415F" font-family="Arial, sans-serif" font-size="14" font-weight="600">Jungang Hospital</text>
+
+    <rect x="124" y="338" width="230" height="52" rx="12" fill="#FFFFFF"/>
+    <circle cx="146" cy="364" r="6" fill="#FFB342"/>
+    <text x="164" y="370" fill="#30415F" font-family="Arial, sans-serif" font-size="14" font-weight="600">Sky Care Hospital</text>
+
+    <rect x="124" y="400" width="230" height="52" rx="12" fill="#FFFFFF"/>
+    <circle cx="146" cy="426" r="6" fill="#E15A8C"/>
+    <text x="164" y="432" fill="#30415F" font-family="Arial, sans-serif" font-size="14" font-weight="600">Seobu Rehab Center</text>
+  </g>
+
+  <rect x="402" y="158" width="1094" height="640" rx="14" fill="#FFFFFF"/>
+  <rect x="428" y="186" width="1042" height="52" rx="10" fill="#F8FAFF"/>
+  <text x="454" y="217" fill="#7785A8" font-family="Arial, sans-serif" font-size="12" font-weight="700">TODAY SCHEDULE</text>
+  <rect x="1300" y="198" width="78" height="28" rx="14" fill="#E8EEFF"/>
+  <text x="1320" y="216" fill="#3151E5" font-family="Arial, sans-serif" font-size="11" font-weight="700">Filter</text>
+
+  <rect x="428" y="256" width="1042" height="516" rx="12" fill="#FBFCFF" stroke="#E6EBF8"/>
+
+  <line x1="468" y1="322" x2="1450" y2="322" stroke="#EAEFFB"/>
+  <line x1="468" y1="392" x2="1450" y2="392" stroke="#EAEFFB"/>
+  <line x1="468" y1="462" x2="1450" y2="462" stroke="#EAEFFB"/>
+  <line x1="468" y1="532" x2="1450" y2="532" stroke="#EAEFFB"/>
+  <line x1="468" y1="602" x2="1450" y2="602" stroke="#EAEFFB"/>
+  <line x1="468" y1="672" x2="1450" y2="672" stroke="#EAEFFB"/>
+
+  <text x="438" y="327" fill="#93A0BF" font-family="Arial, sans-serif" font-size="11" font-weight="700">10:00</text>
+  <text x="438" y="397" fill="#93A0BF" font-family="Arial, sans-serif" font-size="11" font-weight="700">11:00</text>
+  <text x="438" y="467" fill="#93A0BF" font-family="Arial, sans-serif" font-size="11" font-weight="700">12:00</text>
+  <text x="438" y="537" fill="#93A0BF" font-family="Arial, sans-serif" font-size="11" font-weight="700">13:00</text>
+
+  <g filter="url(#shadow)">
+    <rect x="560" y="300" width="220" height="96" rx="12" fill="#FFFFFF"/>
+    <rect x="560" y="300" width="5" height="96" rx="2.5" fill="#3151E5"/>
+    <text x="578" y="334" fill="#2E3E5F" font-family="Arial, sans-serif" font-size="14" font-weight="700">Pickup Check</text>
+    <text x="578" y="356" fill="#7E8DAF" font-family="Arial, sans-serif" font-size="12" font-weight="600">10:20 - 10:40</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="860" y="338" width="240" height="108" rx="12" fill="#FFFFFF"/>
+    <rect x="860" y="338" width="5" height="108" rx="2.5" fill="#29B38D"/>
+    <text x="878" y="374" fill="#2E3E5F" font-family="Arial, sans-serif" font-size="14" font-weight="700">Dispatch &amp; Move</text>
+    <text x="878" y="396" fill="#7E8DAF" font-family="Arial, sans-serif" font-size="12" font-weight="600">10:30 - 11:30</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1168" y="356" width="236" height="98" rx="12" fill="#FFFFFF"/>
+    <rect x="1168" y="356" width="5" height="98" rx="2.5" fill="#FFB342"/>
+    <text x="1186" y="390" fill="#2E3E5F" font-family="Arial, sans-serif" font-size="14" font-weight="700">Inbound Check</text>
+    <text x="1186" y="412" fill="#7E8DAF" font-family="Arial, sans-serif" font-size="12" font-weight="600">10:50 - 11:50</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="884" y="488" width="224" height="88" rx="12" fill="#FFFFFF"/>
+    <rect x="884" y="488" width="5" height="88" rx="2.5" fill="#E15A8C"/>
+    <text x="902" y="520" fill="#2E3E5F" font-family="Arial, sans-serif" font-size="14" font-weight="700">Team Scrum</text>
+    <text x="902" y="542" fill="#7E8DAF" font-family="Arial, sans-serif" font-size="12" font-weight="600">11:00 - 11:15</text>
+  </g>
+</svg>
